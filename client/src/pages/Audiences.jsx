@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from 'react';
-import DashboardLayout from '../components/DashboardLayout';
 import * as d3 from 'd3';
 
 const Audiences = () => {
@@ -201,7 +200,7 @@ const Audiences = () => {
     }, []);
 
     return (
-        <DashboardLayout>
+        <>
             <header className="page-header">
                 <div className="page-header-left">
                     <h1 className="page-title">Audiences</h1>
@@ -390,7 +389,7 @@ const Audiences = () => {
                 <div className="tooltip-count" id="tooltipCount"></div>
             </div>
 
-        </DashboardLayout>
+        </>
     );
 };
 

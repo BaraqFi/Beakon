@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import DashboardLayout from '../components/DashboardLayout';
 import * as d3 from 'd3';
 
 const Analytics = () => {
@@ -258,7 +257,7 @@ const Analytics = () => {
     }, []);
 
     return (
-        <DashboardLayout>
+        <>
             {/* Breadcrumb */}
             <div className="breadcrumb">
                 <span>Links</span>
@@ -552,7 +551,7 @@ const Analytics = () => {
                     </div>
                 </div>
             </div>
-        </DashboardLayout>
+        </>
     );
 };
 

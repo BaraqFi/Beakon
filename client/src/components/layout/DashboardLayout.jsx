@@ -1,12 +1,13 @@
 import React from 'react';
+import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 
-const DashboardLayout = ({ children }) => {
+const DashboardLayout = () => {
     return (
         <div className="app-container">
             <Sidebar />
             <main className="main-content">
-                {children}
+                <Outlet />
             </main>
         </div>
     );

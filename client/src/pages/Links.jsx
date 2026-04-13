@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import DashboardLayout from '../components/DashboardLayout';
-import CreateLinkModal from '../components/CreateLinkModal';
-import CreateLinkSuccessModal from '../components/CreateLinkSuccessModal';
+import CreateLinkModal from '../components/modals/CreateLinkModal';
+import CreateLinkSuccessModal from '../components/modals/CreateLinkSuccessModal';
 import * as d3 from 'd3';
 
 const Links = () => {
@@ -55,7 +54,7 @@ const Links = () => {
     }, []);
 
     return (
-        <DashboardLayout>
+        <>
             <header className="page-header">
                 <div className="page-title-section">
                     <h1>Links</h1>
@@ -379,7 +378,7 @@ const Links = () => {
                 isOpen={isSuccessModalOpen} 
                 onClose={() => setIsSuccessModalOpen(false)} 
             />
-        </DashboardLayout>
+        </>
     );
 };
 

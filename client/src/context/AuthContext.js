@@ -1,13 +1,7 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useState, useCallback } from 'react';
+import mockUser from '../data/mockUser';
 
 const AuthContext = createContext(null);
-
-const defaultUser = {
-  name: 'Alex Morgan',
-  email: 'alex.morgan@example.com',
-  plan: 'Pro',
-  initials: 'AM',
-};
 
 export const AuthProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -15,7 +9,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = useCallback((userData) => {
     setIsLoggedIn(true);
-    setUser(userData || defaultUser);
+    setUser(userData || mockUser);
   }, []);
 
   const logout = useCallback(() => {
@@ -28,12 +22,6 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within AuthProvider');
-  return context;
 };
 
 export default AuthContext;

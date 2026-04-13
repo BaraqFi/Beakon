@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import DashboardLayout from '../components/DashboardLayout';
-import { useAuth } from '../context/AuthContext';
+import useAuth from '../hooks/useAuth';
 
 const UserSettings = () => {
     const { user, logout } = useAuth();
@@ -43,7 +42,7 @@ const UserSettings = () => {
     };
 
     return (
-        <DashboardLayout>
+        <>
             <header className="page-header">
                 <h1 className="page-title">Settings</h1>
             </header>
@@ -169,7 +168,7 @@ const UserSettings = () => {
                     )}
                 </div>
             </div>
-        </DashboardLayout>
+        </>
     );
 };
 

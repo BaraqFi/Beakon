@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import TopNav from '../components/TopNav';
-import Footer from '../components/Footer';
+import TopNav from '../components/layout/TopNav';
+import Footer from '../components/layout/Footer';
 
 const LandingPage = () => {
     const [urlInput, setUrlInput] = useState('');

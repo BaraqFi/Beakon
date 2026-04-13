@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
-import DashboardLayout from '../components/DashboardLayout';
-import MetricCard from '../components/MetricCard';
+import MetricCard from '../components/dashboard/MetricCard';
 import * as d3 from 'd3';
 
 const Dashboard = () => {
@@ -43,7 +42,7 @@ const Dashboard = () => {
     }, []);
 
     return (
-        <DashboardLayout>
+        <>
             <header className="page-header">
                 <div className="page-title-section">
                     <h1>Dashboard</h1>
@@ -273,7 +272,7 @@ const Dashboard = () => {
                     <a href="#" className="view-all-link">View all links →</a>
                 </div>
             </div>
-        </DashboardLayout>
+        </>
     );
 };
 
