@@ -1,8 +1,18 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import MetricCard from '../components/dashboard/MetricCard';
+import Skeleton from '../components/ui/Skeleton';
 import * as d3 from 'd3';
 
 const Analytics = () => {
+    const [isLoading, setIsLoading] = useState(true);
+
     useEffect(() => {
+        const timer = setTimeout(() => setIsLoading(false), 1200);
+        return () => clearTimeout(timer);
+    }, []);
+
+    useEffect(() => {
+        if (isLoading) return;
         // Sparkline for Total Clicks stat card
         const sparklineData = [85, 90, 95, 88, 92, 98, 105, 102, 110, 115, 120, 118, 125, 130, 128, 135, 140, 145, 150, 148, 155, 160, 165, 170, 175, 180, 185, 190, 195, 200];
         
@@ -254,7 +264,7 @@ const Analytics = () => {
             {label: 'Other', value: 8, color: '#FBBF24'}
         ];
         createDonutChart('#browsersChart', browsersData);
-    }, []);
+    }, [isLoading]);
 
     return (
         <>
@@ -283,30 +293,30 @@ const Analytics = () => {
             </header>
 
             {/* Stat Cards */}
-            <div className="stat-cards">
-                <div className="stat-card">
-                    <div className="stat-label">Total Clicks</div>
-                    <div className="stat-value-row">
-                        <div className="stat-value-large violet">48,234</div>
-                        <svg className="stat-sparkline" id="totalClicksSparkline"></svg>
-                    </div>
-                    <div className="stat-trend">
-                        <i className="fas fa-arrow-up"></i>
-                        <span>+12.4% vs last period</span>
-                    </div>
-                </div>
-
-                <div className="stat-card">
-                    <div className="stat-label">Unique Visitors</div>
-                    <div className="stat-value-large emerald">32,451</div>
-                    <div className="stat-secondary">67.3% of total clicks</div>
-                </div>
-
-                <div className="stat-card">
-                    <div className="stat-label">Last Clicked</div>
-                    <div className="stat-time">2 minutes ago</div>
-                    <div className="stat-secondary">4:47 PM, Dec 14 2024</div>
-                </div>
+            <div className="metrics-grid">
+                <MetricCard 
+                    iconClass="fas fa-mouse-pointer"
+                    label="Total Clicks"
+                    value="48,234"
+                    delta="12.4%"
+                    deltaPositive={true}
+                    secondaryText="vs last period"
+                    isLoading={isLoading}
+                />
+                <MetricCard 
+                    iconClass="fas fa-users"
+                    label="Unique Visitors"
+                    value="32,451"
+                    secondaryText="67.3% of total clicks"
+                    isLoading={isLoading}
+                />
+                <MetricCard 
+                    iconClass="fas fa-clock"
+                    label="Last Clicked"
+                    value="2 mins ago"
+                    secondaryText="4:47 PM, Dec 14 2024"
+                    isLoading={isLoading}
+                />
             </div>
 
             {/* Main Chart */}
@@ -320,11 +330,19 @@ const Analytics = () => {
                         <button className="pill-toggle">1Y</button>
                     </div>
                 </div>
-                <svg id="mainChart"></svg>
-                <div className="chart-tooltip" id="chartTooltip">
-                    <div className="tooltip-date" id="tooltipDate"></div>
-                    <div className="tooltip-value" id="tooltipValue"></div>
-                </div>
+                {isLoading ? (
+                    <div style={{ height: '400px', padding: '24px' }}>
+                        <Skeleton height="100%" borderRadius="8px" />
+                    </div>
+                ) : (
+                    <>
+                        <svg id="mainChart"></svg>
+                        <div className="chart-tooltip" id="chartTooltip">
+                            <div className="tooltip-date" id="tooltipDate"></div>
+                            <div className="tooltip-value" id="tooltipValue"></div>
+                        </div>
+                    </>
+                )}
             </div>
 
             {/* Breakdown Grid */}

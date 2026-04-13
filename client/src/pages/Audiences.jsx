@@ -1,10 +1,18 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import Skeleton from '../components/ui/Skeleton';
 import * as d3 from 'd3';
 
 const Audiences = () => {
     const mapRendered = useRef(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
+        const timer = setTimeout(() => setIsLoading(false), 1200);
+        return () => clearTimeout(timer);
+    }, []);
+
+    useEffect(() => {
+        if (isLoading) return;
         let cancelled = false;
 
         // Country data for map visualization
@@ -103,7 +111,9 @@ const Audiences = () => {
                                 .attr('stroke', '#252836')
                                 .attr('stroke-width', 0.5);
                             
-                            tooltip.style('opacity', 0);
+                            tooltip
+                                .style('display', 'none')
+                                .style('opacity', 0);
                         })
                         .on('mousemove', function(event) {
                             tooltip
@@ -197,7 +207,7 @@ const Audiences = () => {
 
         return () => { cancelled = true; };
 
-    }, []);
+    }, [isLoading]);
 
     return (
         <>
@@ -253,7 +263,6 @@ const Audiences = () => {
 
             <div className="content-grid">
                 <div className="card">
-                    <h2 className="card-title">Visitor Map</h2>
                     <svg id="visitorMap"></svg>
                     <div className="map-caption">Hover a country to see click details</div>
                 </div>

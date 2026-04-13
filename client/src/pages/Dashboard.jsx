@@ -1,9 +1,31 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import MetricCard from '../components/dashboard/MetricCard';
+import Skeleton from '../components/ui/Skeleton';
+import CreateLinkModal from '../components/modals/CreateLinkModal';
+import CreateLinkSuccessModal from '../components/modals/CreateLinkSuccessModal';
 import * as d3 from 'd3';
 
 const Dashboard = () => {
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const handleCreateLink = () => {
+        setIsCreateModalOpen(false);
+        setIsSuccessModalOpen(true);
+    };
+
     useEffect(() => {
+        // Simulate network API request
+        const timer = setTimeout(() => {
+            setIsLoading(false);
+        }, 1200);
+
+        return () => clearTimeout(timer);
+    }, []);
+
+    useEffect(() => {
+        if (isLoading) return;
         // D3 Sparkline logic from Dashboard.html
         const sparklineData = [
             [20, 25, 30, 28, 35, 40, 45, 48, 52, 50, 55, 60, 58, 62, 65, 68, 70, 72, 75, 78, 80, 82, 85, 88, 90, 92, 95, 98, 100, 102],
@@ -39,7 +61,7 @@ const Dashboard = () => {
                 .attr('stroke-width', 2)
                 .attr('d', line);
         });
-    }, []);
+    }, [isLoading]);
 
     return (
         <>
@@ -54,7 +76,7 @@ const Dashboard = () => {
                         <span>Last 30 days</span>
                         <i className="fas fa-chevron-down" style={{ fontSize: '10px' }}></i>
                     </div>
-                    <button className="btn-primary">
+                    <button className="btn-primary" onClick={() => setIsCreateModalOpen(true)}>
                         <i className="fas fa-plus"></i>
                         <span>Create Link</span>
                     </button>
@@ -68,24 +90,28 @@ const Dashboard = () => {
                     value="1,247,382"
                     delta="12.4%"
                     deltaPositive={true}
+                    isLoading={isLoading}
                 />
                 <MetricCard 
                     iconClass="fas fa-link"
                     label="Active Links"
                     value="342"
                     secondaryText="+18 this week"
+                    isLoading={isLoading}
                 />
                 <MetricCard 
                     iconClass="fas fa-plus-circle"
                     label="Links Created This Month"
                     value="94"
                     secondaryText="+11 vs last month"
+                    isLoading={isLoading}
                 />
                 <MetricCard 
                     iconClass="fas fa-trophy"
                     label="Top Performer"
                     highlightText="bkn.so/launch"
                     secondaryText="48.2K clicks"
+                    isLoading={isLoading}
                 />
             </div>
 
@@ -104,10 +130,25 @@ const Dashboard = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td>
-                                <div className="link-cell">
-                                    <span className="short-link">bkn.so/launch</span>
+                        {isLoading ? (
+                            Array.from({ length: 5 }).map((_, i) => (
+                                <tr key={i}>
+                                    <td><Skeleton width="180px" height="16px" /><Skeleton width="220px" height="12px" style={{ marginTop: '8px' }} /></td>
+                                    <td><div className="tags"><Skeleton width="60px" height="24px" borderRadius="9999px" /></div></td>
+                                    <td><Skeleton width="60px" height="16px" /></td>
+                                    <td><Skeleton width="60px" height="16px" /></td>
+                                    <td><Skeleton width="100px" height="8px" borderRadius="4px" /></td>
+                                    <td><div style={{ width: '80px', height: '32px' }}><Skeleton height="32px" /></div></td>
+                                    <td><Skeleton width="60px" height="24px" borderRadius="9999px" /></td>
+                                    <td><Skeleton width="24px" height="24px" borderRadius="4px" /></td>
+                                </tr>
+                            ))
+                        ) : (
+                            <>
+                                <tr>
+                                    <td>
+                                        <div className="link-cell">
+                                            <span className="short-link">bkn.so/launch</span>
                                     <span className="destination">https://example.com/product-launch-2024</span>
                                 </div>
                             </td>
@@ -266,12 +307,24 @@ const Dashboard = () => {
                                 </button>
                             </td>
                         </tr>
+                            </>
+                        )}
                     </tbody>
                 </table>
                 <div className="view-all-footer">
                     <a href="#" className="view-all-link">View all links →</a>
                 </div>
             </div>
+
+            <CreateLinkModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onCreate={handleCreateLink}
+            />
+            <CreateLinkSuccessModal
+                isOpen={isSuccessModalOpen}
+                onClose={() => setIsSuccessModalOpen(false)}
+            />
         </>
     );
 };

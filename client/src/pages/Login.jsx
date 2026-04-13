@@ -27,7 +27,7 @@ const Login = () => {
 
         setTimeout(() => {
             login();
-            navigate('/links');
+            navigate('/dashboard');
         }, 1200);
     };
 

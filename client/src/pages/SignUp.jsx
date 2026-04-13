@@ -52,7 +52,7 @@ const SignUp = () => {
         // Simulate API call
         setTimeout(() => {
             login({ name: 'Alex Morgan', email, plan: 'Free', initials: 'AM' });
-            navigate('/links');
+            navigate('/dashboard');
         }, 1200);
     };
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, onClose }) => {
     const [showPopover, setShowPopover] = useState(false);
     const { user, logout } = useAuth();
     const navigate = useNavigate();
@@ -13,15 +13,25 @@ const Sidebar = () => {
     };
 
     return (
-        <aside className="sidebar">
-            <Link to="/links" className="logo" style={{ textDecoration: 'none' }}>
-                <div className="logo-icon">
-                    <i className="fas fa-tower-broadcast"></i>
-                </div>
-                <div className="logo-text">Beakon</div>
-            </Link>
+        <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Link to="/links" className="logo" style={{ textDecoration: 'none', marginBottom: 0 }}>
+                    <div className="logo-icon">
+                        <i className="fas fa-tower-broadcast"></i>
+                    </div>
+                    <div className="logo-text">Beakon</div>
+                </Link>
+                {/* Mobile close button */}
+                <button 
+                    className="mobile-header-btn" 
+                    onClick={onClose} 
+                    style={{ display: window.innerWidth <= 1024 ? 'block' : 'none' }}
+                >
+                    <i className="fas fa-times"></i>
+                </button>
+            </div>
 
-            <nav className="nav">
+            <nav className="nav" style={{ marginTop: '24px' }}>
                 <NavLink to="/dashboard" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                     <i className="fas fa-chart-line"></i>
                     <span>Dashboard</span>
