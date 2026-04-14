@@ -1,0 +1,77 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    branches: [main]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    env:
+      APP_DIR: ${{ secrets.EC2_APP_DIR }}
+      PM2_PROCESS_NAME: ${{ secrets.PM2_PROCESS_NAME }}
+      HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: true
+          script: |
+            if [ -z "$APP_DIR" ]; then
+              echo "EC2_APP_DIR is required"
+              exit 1
+            fi
+
+            if [ -z "$PM2_PROCESS_NAME" ]; then
+              echo "PM2_PROCESS_NAME is required"
+              exit 1
+            fi
+
+            cd "$APP_DIR"
+            git fetch origin main
+            git checkout main
+            git pull --ff-only origin main
+
+            cd server
+            if ! command -v pnpm >/dev/null 2>&1; then
+              corepack enable
+            fi
+            pnpm install --frozen-lockfile
+            cd ../client
+            pnpm install --frozen-lockfile
+            pnpm run build
+            cd ../server
+
+            pm2 restart "$PM2_PROCESS_NAME"
+            pm2 save
+
+      - name: Health check
+        run: |
+          if [ -z "$HEALTHCHECK_URL" ]; then
+            echo "HEALTHCHECK_URL is not set; skipping health check."
+            exit 0
+          fi
+
+          for attempt in {1..10}; do
+            if curl -fsS "$HEALTHCHECK_URL" >/dev/null; then
+              echo "Health check passed."
+              exit 0
+            fi
+            echo "Health check attempt $attempt failed, retrying..."
+            sleep 3
+          done
+
+          echo "Health check failed after retries."
+          exit 1
+

@@ -46,7 +46,33 @@ The frontend uses:
 - `REACT_APP_API_URL` for API calls
 - Optional `REACT_APP_PUBLIC_BASE_URL` to override displayed short-link base URL
 
+## CI/CD (GitHub Actions)
+
+Workflows are in `.github/workflows/`:
+
+- `ci.yml`
+  - Runs on PRs and pushes to `main`
+  - Server: install, env check, lint, test
+  - Client: install, env check, lint, build
+
+- `cd.yml`
+  - Runs only after `CI` succeeds on `main`
+  - SSH deploys to EC2, installs deps, builds client, restarts PM2 process
+  - Performs health check with retries
+
+### Required Deployment Secrets
+
+Set these in GitHub repository secrets:
+
+- `EC2_HOST`
+- `EC2_USER`
+- `EC2_SSH_KEY`
+- `EC2_APP_DIR`
+- `PM2_PROCESS_NAME`
+- `HEALTHCHECK_URL` (optional but recommended)
+
 ## Available Docs
 
 - `client/README.md` — frontend details
 - `server/README.md` — backend/API details
+- `DEPLOYMENT.md` — EC2 + Vercel deployment steps

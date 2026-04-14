@@ -1,4 +1,4 @@
-const errorHandler = (err, req, res, next) => {
+const errorHandler = (err, req, res, _next) => {
     console.error(`[Server Error] ${err.message}`);
 
     const statusCode = err.statusCode || err.status || 500;

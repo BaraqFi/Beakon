@@ -145,7 +145,7 @@ const Audiences = () => {
                             tooltip.style('left', (event.pageX + 10) + 'px').style('top', (event.pageY - 40) + 'px').style('opacity', 1);
                         }
                     })
-                    .on('mouseout', function(event, d) {
+                    .on('mouseout', function(_event, _d) {
                         d3.select(this).attr('stroke', '#252836').attr('stroke-width', 0.5);
                         tooltip.style('display', 'none').style('opacity', 0);
                     })
@@ -153,7 +153,7 @@ const Audiences = () => {
                         tooltip.style('left', (event.pageX + 10) + 'px').style('top', (event.pageY - 40) + 'px').style('display', 'block');
                     });
             });
-    }, [isLoading, countryData, hasData, windowWidth]);
+    }, [isLoading, countryData, hasData]);
 
     return (
         <>

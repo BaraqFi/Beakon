@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import api from '../services/api';
 import MetricCard from '../components/dashboard/MetricCard';
 import Skeleton from '../components/ui/Skeleton';
