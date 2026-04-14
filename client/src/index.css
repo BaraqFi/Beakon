@@ -4066,7 +4066,7 @@ input {
 .login-auth-container {
   min-height: 100vh;
   position: relative;
-  background: #0b0d17;
+  background: #16112a;
   display: flex;
 }
 
@@ -4077,7 +4077,7 @@ input {
   bottom: 0;
   left: 50%;
   width: 1px;
-  background: linear-gradient(180deg, transparent 0%, rgba(139, 92, 246, 0.08) 20%, rgba(139, 92, 246, 0.08) 80%, transparent 100%);
+  background: linear-gradient(180deg, transparent 0%, rgba(167, 139, 250, 0.22) 15%, rgba(139, 92, 246, 0.22) 85%, transparent 100%);
   transform: translateX(-0.5px);
   z-index: 1;
   pointer-events: none;
@@ -4098,12 +4098,12 @@ input {
 .login-left-panel::before {
   content: '';
   position: absolute;
-  width: 500px;
-  height: 500px;
-  top: 45%;
+  width: 680px;
+  height: 680px;
+  top: 40%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.12) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.28) 0%, rgba(109, 40, 217, 0.12) 40%, transparent 68%);
   z-index: 0;
   pointer-events: none;
 }
@@ -4111,11 +4111,56 @@ input {
 .login-left-bg-image {
   position: relative;
   width: 100%;
-  max-width: 540px;
+  max-width: 580px;
   height: auto;
   z-index: 1;
-  opacity: 0.9;
-  margin-bottom: 40px;
+  opacity: 0.92;
+  margin-bottom: 28px;
+  filter: drop-shadow(0 0 32px rgba(139, 92, 246, 0.35)) drop-shadow(0 0 12px rgba(167, 139, 250, 0.2));
+}
+
+.login-map-wrapper .login-left-bg-image {
+  margin-bottom: 0;
+}
+
+/* Circular decorative frame around the map */
+.login-map-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 580px;
+  margin-bottom: 28px;
+  z-index: 1;
+}
+
+.login-map-ring {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.login-map-ring--outer {
+  width: 500px;
+  height: 500px;
+  border: 1px solid rgba(167, 139, 250, 0.2);
+  box-shadow:
+    0 0 0 1px rgba(124, 58, 237, 0.08),
+    0 0 50px rgba(124, 58, 237, 0.12),
+    inset 0 0 50px rgba(124, 58, 237, 0.06);
+}
+
+.login-map-ring--inner {
+  width: 340px;
+  height: 340px;
+  border: 1px solid rgba(192, 132, 252, 0.15);
+  box-shadow:
+    0 0 24px rgba(139, 92, 246, 0.1),
+    inset 0 0 24px rgba(139, 92, 246, 0.05);
 }
 
 .login-left-content {
@@ -4128,13 +4173,13 @@ input {
 }
 
 .login-left-content .logo-mark {
-  margin: 0 0 12px 0;
-  width: 48px;
-  height: 48px;
-  font-size: 20px;
+  margin: 0 0 18px 0;
+  width: 64px;
+  height: 64px;
+  font-size: 26px;
   background: #7c3aed;
-  border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3);
+  border-radius: 16px;
+  box-shadow: 0 10px 28px rgba(124, 58, 237, 0.4);
 }
 
 .login-left-content .brand-name {
@@ -4164,39 +4209,52 @@ input {
 .login-auth-card {
   width: 100%;
   max-width: 400px;
-  background: rgba(30, 35, 61, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 24px;
-  padding: 48px 32px 32px;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
+  background: rgba(24, 16, 50, 0.7);
+  border: 1px solid rgba(139, 92, 246, 0.18);
+  border-radius: 20px;
+  padding: 40px 36px 36px;
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(167, 139, 250, 0.06);
 }
 
 .login-auth-card .auth-title {
   color: #a855f7;
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
-  margin-bottom: 32px;
+  margin-bottom: 28px;
   text-align: left;
+  letter-spacing: -0.01em;
 }
 
 .login-auth-card .form-label {
-  color: #f8fafc;
-  font-size: 14px;
+  color: #e2e8f0;
+  font-size: 13px;
   margin-bottom: 8px;
   font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.login-auth-card .form-group {
+  margin-bottom: 20px;
+}
+
+.login-auth-card .form-group.last {
+  margin-bottom: 20px;
 }
 
 .login-auth-card .form-input {
-  background: rgba(15, 20, 35, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(10, 8, 30, 0.6);
+  border: 1px solid rgba(139, 92, 246, 0.12);
   color: #f1f5f9;
-  font-size: 15px;
-  border-radius: 12px;
-  height: 52px;
+  font-size: 14px;
+  border-radius: 10px;
+  height: 50px;
   padding: 0 16px;
   width: 100%;
+}
+.login-auth-card .form-input:hover {
+  border-color: rgba(139, 92, 246, 0.25);
 }
 
 .login-auth-card .form-input:focus {
@@ -4210,24 +4268,59 @@ input {
 }
 
 .login-auth-card .btn-continue {
-  margin-top: 24px;
-  height: 52px;
+  margin-top: 8px;
+  height: 50px;
   background: #7c3aed;
-  border-radius: 12px;
-  font-size: 16px;
+  border-radius: 10px;
+  font-size: 15px;
   font-weight: 600;
   color: #ffffff;
+  letter-spacing: 0.01em;
   transition: all 0.2s ease;
 }
 
 .login-auth-card .btn-continue:hover {
   background: #6d28d9;
   transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.4);
+  box-shadow: 0 10px 28px rgba(109, 40, 217, 0.45);
+}
+
+.login-auth-card .btn-continue:focus {
+  outline: 2px solid rgba(168, 85, 247, 0.5);
+  outline-offset: 2px;
 }
 
 .login-auth-container .auth-footer {
-  margin-top: 24px;
+  margin-top: 28px;
+  text-align: center;
+}
+
+/* Reset button-as-link for forgot password */
+.auth-forgot-row button.auth-link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  display: inline;
+}
+
+.auth-muted {
+  font-size: 13px;
+  color: #94a3b8;
+  text-align: center;
+}
+
+/* Error message */
+.auth-error {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #f87171;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
   text-align: center;
 }
 

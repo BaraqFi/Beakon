@@ -38,7 +38,11 @@ const Login = () => {
     return (
         <div className="auth-container login-auth-container">
             <div className="left-panel login-left-panel">
-                <img src="/hero.PNG" alt="" className="login-left-bg-image" aria-hidden="true" />
+                <div className="login-map-wrapper">
+                    <span className="login-map-ring login-map-ring--outer" aria-hidden="true" />
+                    <span className="login-map-ring login-map-ring--inner" aria-hidden="true" />
+                    <img src="/transparent.PNG" alt="" className="login-left-bg-image" aria-hidden="true" />
+                </div>
                 <div className="left-content login-left-content">
                     <div className="logo-mark">
                         <i className="fas fa-tower-broadcast"></i>
@@ -114,7 +118,6 @@ const Login = () => {
                         )}
                     </div>
                 </div>
-                <span className="login-sparkle" aria-hidden="true">✦</span>
             </div>
         </div>
     );
