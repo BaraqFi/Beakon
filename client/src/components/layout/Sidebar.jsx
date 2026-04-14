@@ -23,9 +23,8 @@ const Sidebar = ({ isOpen, onClose }) => {
                 </Link>
                 {/* Mobile close button */}
                 <button 
-                    className="mobile-header-btn" 
-                    onClick={onClose} 
-                    style={{ display: window.innerWidth <= 1024 ? 'block' : 'none' }}
+                    className="mobile-header-btn sidebar-close-btn" 
+                    onClick={onClose}
                 >
                     <i className="fas fa-times"></i>
                 </button>

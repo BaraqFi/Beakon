@@ -10,6 +10,13 @@ import * as d3 from 'd3';
 const Analytics = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [timePeriod, setTimePeriod] = useState('30D');
+    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+    useEffect(() => {
+        const handleResize = () => setWindowWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     // Will be populated by API
     const [stats, setStats] = useState(null);
@@ -151,7 +158,7 @@ const Analytics = () => {
 
         createDonutChart('#devicesChart', devices, stats?.totalClicks?.toLocaleString());
         createDonutChart('#browsersChart', browsers, stats?.totalClicks?.toLocaleString());
-    }, [isLoading, devices, browsers, stats]);
+    }, [isLoading, devices, browsers, stats, windowWidth]);
 
     const topLocation = locations[0];
     const maxLocationCount = topLocation?.count || 1;

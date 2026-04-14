@@ -153,7 +153,7 @@ const Audiences = () => {
                         tooltip.style('left', (event.pageX + 10) + 'px').style('top', (event.pageY - 40) + 'px').style('display', 'block');
                     });
             });
-    }, [isLoading, countryData, hasData]);
+    }, [isLoading, countryData, hasData, windowWidth]);
 
     return (
         <>
