@@ -45,7 +45,11 @@ jobs:
 
             cd server
             if ! command -v pnpm >/dev/null 2>&1; then
-              corepack enable
+              if command -v corepack >/dev/null 2>&1; then
+                corepack enable
+              else
+                npm install -g pnpm
+              fi
             fi
             pnpm install --frozen-lockfile
             cd ../client

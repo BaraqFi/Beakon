@@ -37,9 +37,9 @@ ssh -i <path-to-key.pem> ec2-user@<EC2_PUBLIC_IP>
 
 ```bash
 sudo dnf update -y
-sudo dnf install -y git curl nginx nodejs
+sudo dnf install -y git nginx nodejs
 sudo npm install -g pm2
-corepack enable
+sudo npm install -g pnpm
 
 git clone <YOUR_GITHUB_REPO_URL> beakon
 cd beakon/server
