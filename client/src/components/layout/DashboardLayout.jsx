@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import useAuth from '../../hooks/useAuth';
 
 const DashboardLayout = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const { isLoggedIn } = useAuth();
+
+    if (!isLoggedIn) {
+        return <Navigate to="/login" replace />;
+    }
 
     return (
         <div className="app-container">

@@ -1,29 +1,46 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
+import api from '../services/api';
 
 const UserSettings = () => {
-    const { user, logout } = useAuth();
+    const { user, setUser, logout } = useAuth();
     const navigate = useNavigate();
 
     const [isApiKeyVisible, setIsApiKeyVisible] = useState(false);
-    const [apiKey, setApiKey] = useState('sk_live_abc123def456ghi789jkl012mno345pqr678stu');
-    const [name, setName] = useState(user?.name || 'Alex Morgan');
-    const [email, setEmail] = useState(user?.email || 'alex.morgan@example.com');
+    const [apiKey, setApiKey] = useState(user?.apiKey || '');
+    const [name, setName] = useState(user?.name || '');
+    const [email, setEmail] = useState(user?.email || '');
     const [saveLoading, setSaveLoading] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
+    const [error, setError] = useState('');
+    const [deleteLoading, setDeleteLoading] = useState(false);
+
+    useEffect(() => {
+        setName(user?.name || '');
+        setEmail(user?.email || '');
+    }, [user]);
 
     // Delete account flow
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleteInput, setDeleteInput] = useState('');
 
-    const handleSave = () => {
+    const handleSave = async () => {
         setSaveLoading(true);
-        setTimeout(() => {
-            setSaveLoading(false);
+        setError('');
+        try {
+            const { data } = await api.patch('/api/auth/me', {
+                name: name.trim(),
+                email: email.trim()
+            });
+            setUser(data.user);
             setSaveSuccess(true);
             setTimeout(() => setSaveSuccess(false), 3000);
-        }, 1000);
+        } catch (saveError) {
+            setError(saveError?.response?.data?.error || 'Failed to save profile');
+        } finally {
+            setSaveLoading(false);
+        }
     };
 
     const handleRegenerate = () => {
@@ -34,10 +51,19 @@ const UserSettings = () => {
         setIsApiKeyVisible(true);
     };
 
-    const handleDeleteAccount = () => {
+    const handleDeleteAccount = async () => {
         if (deleteInput === 'DELETE') {
-            logout();
-            navigate('/');
+            setDeleteLoading(true);
+            setError('');
+            try {
+                await api.delete('/api/auth/me');
+                await logout();
+                navigate('/');
+            } catch (deleteError) {
+                setError(deleteError?.response?.data?.error || 'Failed to delete account');
+            } finally {
+                setDeleteLoading(false);
+            }
         }
     };
 
@@ -60,13 +86,22 @@ const UserSettings = () => {
                     Profile updated
                 </div>
             )}
+            {error && (
+                <div style={{
+                    position: 'fixed', top: '24px', right: '24px', background: '#1A2235',
+                    border: '1px solid #DC2626', borderRadius: '8px', padding: '12px 20px',
+                    color: '#DC2626', fontSize: '13px', fontWeight: '600', zIndex: 1000
+                }}>
+                    {error}
+                </div>
+            )}
 
             <div className="settings-container">
                 {/* Profile Section */}
                 <div className="settings-card">
                     <h2 className="card-title">Profile</h2>
                     <div className="profile-row">
-                        <div className="profile-avatar">{user?.initials || 'AM'}</div>
+                        <div className="profile-avatar">{user?.initials || (name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : '?')}</div>
                         <div className="profile-inputs">
                             <div className="input-group">
                                 <label className="input-label">Name</label>
@@ -155,10 +190,10 @@ const UserSettings = () => {
                                 <button 
                                     className="btn btn-danger" 
                                     onClick={handleDeleteAccount}
-                                    disabled={deleteInput !== 'DELETE'}
-                                    style={deleteInput !== 'DELETE' ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
+                                    disabled={deleteInput !== 'DELETE' || deleteLoading}
+                                    style={deleteInput !== 'DELETE' || deleteLoading ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
                                 >
-                                    Confirm
+                                    {deleteLoading ? 'Deleting...' : 'Confirm'}
                                 </button>
                                 <button className="btn btn-ghost" onClick={() => { setShowDeleteConfirm(false); setDeleteInput(''); }}>
                                     Cancel

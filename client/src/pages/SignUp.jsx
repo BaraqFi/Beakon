@@ -4,7 +4,7 @@ import useAuth from '../hooks/useAuth';
 
 const SignUp = () => {
     const navigate = useNavigate();
-    const { login } = useAuth();
+    const { register } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -44,16 +44,19 @@ const SignUp = () => {
         }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         if (!emailValid || !passwordValid) return;
         setIsLoading(true);
-
-        // Simulate API call
-        setTimeout(() => {
-            login({ name: 'Alex Morgan', email, plan: 'Free', initials: 'AM' });
+        try {
+            await register({ email, password, name: email.split('@')[0] });
             navigate('/dashboard');
-        }, 1200);
+        } catch (error) {
+            console.error('Registration failed:', error);
+            setEmailError(true);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const getEmailStyles = () => {

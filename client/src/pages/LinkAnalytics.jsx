@@ -1,38 +1,106 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import mockLinks from '../data/mockLinks';
+import api from '../services/api';
+import MetricCard from '../components/dashboard/MetricCard';
+import Skeleton from '../components/ui/Skeleton';
+import EmptyState from '../components/ui/EmptyState';
+import useClipboard from '../hooks/useClipboard';
+import ErrorNotice from '../components/ui/ErrorNotice';
 
 const LinkAnalytics = () => {
   const { shortCode } = useParams();
-  const link = mockLinks.find((l) => l.shortCode === shortCode);
+  const [isLoading, setIsLoading] = useState(true);
+  const [link, setLink] = useState(null);
+  const [error, setError] = useState('');
+  const { copied, copy } = useClipboard();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchLinkAnalytics = async () => {
+      setIsLoading(true);
+      setError('');
+      try {
+        const { data: linksData } = await api.get('/api/links');
+        const links = Array.isArray(linksData) ? linksData : [];
+        const selectedLink = links.find((item) => item.shortCode === shortCode);
+
+        if (!selectedLink) {
+          if (isMounted) setLink(null);
+          return;
+        }
+
+        const linkId = selectedLink.id || selectedLink._id;
+        const { data: analyticsData } = await api.get(`/api/analytics/${linkId}`);
+        const stats = analyticsData.stats || {};
+
+        if (isMounted) {
+          setLink({
+            ...selectedLink,
+            totalClicks: stats.totalClicks || 0,
+            uniqueVisitors: stats.uniqueVisitors || 0,
+            ctr: stats.totalClicks > 0 ? Number(((stats.uniqueVisitors / stats.totalClicks) * 100).toFixed(1)) : 0
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load link analytics', error);
+        if (isMounted) setError(error?.response?.data?.error || 'Failed to load link analytics');
+        if (isMounted) setLink(null);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+
+    fetchLinkAnalytics();
+    return () => {
+      isMounted = false;
+    };
+  }, [shortCode]);
+
+  if (isLoading) {
+    return (
+      <>
+        <div className="breadcrumb">
+          <Skeleton width="200px" height="16px" />
+        </div>
+        <header className="page-header">
+          <Skeleton width="300px" height="28px" />
+        </header>
+        <div className="metrics-grid">
+          <MetricCard isLoading={true} label="Total Clicks" />
+          <MetricCard isLoading={true} label="Unique Visitors" />
+          <MetricCard isLoading={true} label="CTR" />
+        </div>
+        <div style={{ height: '300px', padding: '24px' }}>
+          <Skeleton height="100%" borderRadius="8px" />
+        </div>
+      </>
+    );
+  }
 
   if (!link) {
     return (
-      <div style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        justifyContent: 'center', padding: '80px 24px', color: '#6B7280',
-      }}>
-        <i className="fas fa-link-slash" style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.4 }} />
-        <div style={{ fontSize: '18px', fontWeight: 600, color: '#D1D5DB', marginBottom: '8px' }}>
-          Link not found
-        </div>
-        <div style={{ fontSize: '14px', marginBottom: '20px' }}>
-          No link exists with short code <strong style={{ color: '#F8FAFC' }}>{shortCode}</strong>
-        </div>
-        <Link to="/links" className="btn-primary" style={{ textDecoration: 'none' }}>
-          ← Back to Links
-        </Link>
-      </div>
+      <EmptyState
+        icon="fas fa-chart-line"
+        title="No analytics data"
+        description={`Analytics for link "${shortCode}" will appear here once data is available.`}
+        action={
+          <Link to="/links" className="btn-primary" style={{ textDecoration: 'none', display: 'inline-flex' }}>
+            ← Back to Links
+          </Link>
+        }
+      />
     );
   }
 
   return (
     <>
+      <ErrorNotice message={error} onRetry={() => window.location.reload()} />
       {/* Breadcrumb */}
       <div className="breadcrumb">
         <Link to="/links" style={{ color: '#6B7280', textDecoration: 'none' }}>Links</Link>
         <i className="fas fa-chevron-right breadcrumb-arrow" />
-        <span>bkn.so/{link.shortCode}</span>
+        <span>{link.shortUrl}</span>
       </div>
 
       {/* Page Header */}
@@ -40,8 +108,14 @@ const LinkAnalytics = () => {
         <div className="page-header-left">
           <h1 className="page-title">{link.title}</h1>
           <div className="short-link-pill">
-            <span>bkn.so/{link.shortCode}</span>
-            <i className="fas fa-copy copy-icon" />
+            <span>{link.shortUrl}</span>
+            <button
+              type="button"
+              onClick={() => copy(link.shortUrl)}
+              style={{ background: 'none', border: 'none', color: '#6B7280', cursor: 'pointer' }}
+            >
+              <i className={`fas ${copied ? 'fa-check' : 'fa-copy'} copy-icon`} />
+            </button>
           </div>
           <span className={`status-badge ${link.status}`}>
             {link.status === 'active' ? 'Active' : 'Paused'}
@@ -55,29 +129,26 @@ const LinkAnalytics = () => {
       </header>
 
       {/* Stat Cards */}
-      <div className="stat-cards">
-        <div className="stat-card">
-          <div className="stat-label">Total Clicks</div>
-          <div className="stat-value-large violet">{link.totalClicks.toLocaleString()}</div>
-          <div className="stat-trend">
-            <i className="fas fa-arrow-up" />
-            <span>+{link.ctr}% vs last period</span>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-label">Unique Visitors</div>
-          <div className="stat-value-large emerald">{link.uniqueVisitors.toLocaleString()}</div>
-          <div className="stat-secondary">
-            {((link.uniqueVisitors / link.totalClicks) * 100).toFixed(1)}% of total clicks
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-label">Click-Through Rate</div>
-          <div className="stat-value-large violet">{link.ctr}%</div>
-          <div className="stat-secondary">Last 30 days</div>
-        </div>
+      <div className="metrics-grid">
+        <MetricCard
+          iconClass="fas fa-mouse-pointer"
+          label="Total Clicks"
+          value={link.totalClicks?.toLocaleString() || '0'}
+          delta={link.clicksDelta}
+          deltaPositive={link.clicksDeltaPositive}
+        />
+        <MetricCard
+          iconClass="fas fa-users"
+          label="Unique Visitors"
+          value={link.uniqueVisitors?.toLocaleString() || '0'}
+          secondaryText={link.totalClicks ? `${((link.uniqueVisitors / link.totalClicks) * 100).toFixed(1)}% of total clicks` : undefined}
+        />
+        <MetricCard
+          iconClass="fas fa-percentage"
+          label="Click-Through Rate"
+          value={`${link.ctr || 0}%`}
+          secondaryText="Last 30 days"
+        />
       </div>
 
       <div style={{
@@ -85,7 +156,7 @@ const LinkAnalytics = () => {
         padding: '48px 24px', textAlign: 'center', color: '#6B7280', fontSize: '14px',
       }}>
         <i className="fas fa-chart-area" style={{ fontSize: '32px', marginBottom: '12px', opacity: 0.4, display: 'block' }} />
-        Detailed charts for <strong style={{ color: '#F8FAFC' }}>bkn.so/{link.shortCode}</strong> will be rendered here.
+        Detailed click charts for <strong style={{ color: '#F8FAFC' }}>{link.shortUrl}</strong> will be populated by the API.
       </div>
     </>
   );

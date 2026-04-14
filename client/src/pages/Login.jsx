@@ -11,7 +11,7 @@ const Login = () => {
     const navigate = useNavigate();
     const { login } = useAuth();
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         const newErrors = {};
         if (!email.trim()) newErrors.email = true;
@@ -24,18 +24,22 @@ const Login = () => {
 
         setErrors({});
         setIsLoading(true);
-
-        setTimeout(() => {
-            login();
+        try {
+            await login(email.trim(), password);
             navigate('/dashboard');
-        }, 1200);
+        } catch (error) {
+            console.error('Login failed:', error);
+            setErrors({ form: true });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
-        <div className="auth-container">
-            {/* Left Panel */}
-            <div className="left-panel">
-                <div className="left-content">
+        <div className="auth-container login-auth-container">
+            <div className="left-panel login-left-panel">
+                <img src="/hero.PNG" alt="" className="login-left-bg-image" aria-hidden="true" />
+                <div className="left-content login-left-content">
                     <div className="logo-mark">
                         <i className="fas fa-tower-broadcast"></i>
                     </div>
@@ -44,22 +48,26 @@ const Login = () => {
                 </div>
             </div>
 
-            {/* Right Panel */}
-            <div className="right-panel">
-                <div className="auth-card">
+            <div className="right-panel login-right-panel">
+                <div className="auth-card login-auth-card">
                     <h1 className="auth-title">Welcome back</h1>
                     
                     <form onSubmit={handleSubmit}>
+                        {errors.form && (
+                            <div className="auth-error">
+                                Invalid email or password.
+                            </div>
+                        )}
                         <div className="form-group">
                             <label className="form-label" htmlFor="login-email">Email</label>
                             <input 
                                 type="email" 
                                 id="login-email" 
                                 className="form-input" 
-                                placeholder="you@example.com" 
+                                placeholder="you@sxample.com" 
                                 value={email}
                                 onChange={(e) => { setEmail(e.target.value); setErrors(prev => ({...prev, email: false})); }}
-                                style={errors.email ? { borderColor: '#DC2626' } : {}}
+                                style={errors.email ? { borderColor: '#ef4444' } : {}}
                             />
                         </div>
 
@@ -72,7 +80,7 @@ const Login = () => {
                                 placeholder="••••••••" 
                                 value={password}
                                 onChange={(e) => { setPassword(e.target.value); setErrors(prev => ({...prev, password: false})); }}
-                                style={errors.password ? { borderColor: '#DC2626' } : {}}
+                                style={errors.password ? { borderColor: '#ef4444' } : {}}
                             />
                         </div>
 
@@ -80,26 +88,25 @@ const Login = () => {
                             type="submit" 
                             className="btn-continue" 
                             disabled={isLoading}
-                            style={isLoading ? { opacity: 0.7 } : {}}
                         >
                             {isLoading ? 'Signing in...' : 'Continue'}
                         </button>
                     </form>
 
                     <div className="auth-footer">
-                        <div>
+                        <div className="auth-signup-row">
                             Don't have an account? <Link to="/signup" className="auth-link">Sign up</Link>
                         </div>
                         {forgotMsg ? (
-                            <div style={{ marginTop: '12px', color: '#6B7280', fontSize: '13px' }}>
+                            <div className="auth-muted">
                                 Password reset coming soon.
                             </div>
                         ) : (
-                            <div style={{ marginTop: '12px' }}>
+                            <div className="auth-forgot-row">
                                 <button 
+                                    type="button"
                                     onClick={() => setForgotMsg(true)} 
                                     className="auth-link"
-                                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}
                                 >
                                     Forgot password?
                                 </button>
@@ -107,6 +114,7 @@ const Login = () => {
                         )}
                     </div>
                 </div>
+                <span className="login-sparkle" aria-hidden="true">✦</span>
             </div>
         </div>
     );

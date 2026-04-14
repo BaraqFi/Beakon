@@ -1,289 +1,169 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import api from '../services/api';
 import MetricCard from '../components/dashboard/MetricCard';
 import Skeleton from '../components/ui/Skeleton';
+import EmptyState from '../components/ui/EmptyState';
+import ErrorNotice from '../components/ui/ErrorNotice';
 import * as d3 from 'd3';
 
 const Analytics = () => {
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
+    const [timePeriod, setTimePeriod] = useState('30D');
+
+    // Will be populated by API
+    const [stats, setStats] = useState(null);
+    const [chartData, setChartData] = useState([]);
+    const [locations, setLocations] = useState([]);
+    const [devices, setDevices] = useState([]);
+    const [browsers, setBrowsers] = useState([]);
+    const [clicksLog, setClicksLog] = useState([]);
+    const [error, setError] = useState('');
+
+    const fetchAnalytics = async () => {
+            setIsLoading(true);
+            setError('');
+            try {
+                const linksRes = await api.get('/api/links');
+                const links = Array.isArray(linksRes.data) ? linksRes.data : [];
+                if (links.length === 0) return;
+
+                const linkId = links[0]._id || links[0].id;
+                const { data } = await api.get(`/api/analytics/${linkId}`);
+                const analytics = data.stats;
+
+                setStats({
+                    totalClicks: analytics.totalClicks || 0,
+                    uniqueVisitors: analytics.uniqueVisitors || 0
+                });
+
+                setChartData((analytics.clicksByDate || []).map((entry) => ({
+                    date: entry._id,
+                    value: entry.count
+                })));
+
+                setLocations((analytics.byCountry || []).map((entry) => ({
+                    country: entry._id || 'Unknown',
+                    count: entry.count,
+                    flag: '🌍'
+                })));
+
+                const dColors = ['#8B5CF6', '#F43F5E', '#10B981', '#F59E0B'];
+                setDevices((analytics.byDevice || []).map((entry, idx) => ({
+                    label: entry._id || 'Unknown',
+                    value: entry.count,
+                    color: dColors[idx % 4]
+                })));
+
+                setBrowsers((analytics.byBrowser || []).map((entry, idx) => ({
+                    label: entry._id || 'Unknown',
+                    value: entry.count,
+                    color: dColors[idx % 4]
+                })));
+
+                const clicksRes = await api.get(`/api/analytics/${linkId}/clicks?limit=5`);
+                setClicksLog((clicksRes.data?.clicks || []).map((c) => ({
+                    id: c._id,
+                    time: new Date(c.clickedAt).toLocaleString(),
+                    country: c.country,
+                    city: c.city,
+                    device: c.device,
+                    browser: c.browser,
+                    os: c.os,
+                    referrer: c.referrer || 'Direct'
+                })));
+            } catch (error) {
+                console.error("Analytics extraction failed:", error);
+                setError(error?.response?.data?.error || 'Failed to load analytics');
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
     useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 1200);
-        return () => clearTimeout(timer);
+        fetchAnalytics();
     }, []);
 
+    // D3 chart rendering — only runs when real data arrives
     useEffect(() => {
-        if (isLoading) return;
-        // Sparkline for Total Clicks stat card
-        const sparklineData = [85, 90, 95, 88, 92, 98, 105, 102, 110, 115, 120, 118, 125, 130, 128, 135, 140, 145, 150, 148, 155, 160, 165, 170, 175, 180, 185, 190, 195, 200];
-        
-        const sparkSvg = d3.select('#totalClicksSparkline');
-        sparkSvg.selectAll("*").remove(); // clear previous renders
-        const sparkWidth = 80;
-        const sparkHeight = 32;
+        if (isLoading || chartData.length === 0) return;
 
-        const sparkX = d3.scaleLinear()
-            .domain([0, sparklineData.length - 1])
-            .range([0, sparkWidth]);
-
-        const sparkY = d3.scaleLinear()
-            .domain([d3.min(sparklineData), d3.max(sparklineData)])
-            .range([sparkHeight - 2, 2]);
-
-        const sparkLine = d3.line()
-            .x((d, i) => sparkX(i))
-            .y(d => sparkY(d))
-            .curve(d3.curveMonotoneX);
-
-        sparkSvg.append('path')
-            .datum(sparklineData)
-            .attr('fill', 'none')
-            .attr('stroke', '#06B6D4')
-            .attr('stroke-width', 2)
-            .attr('d', sparkLine);
-
-        // Main chart data
-        const chartData = [
-            {date: 'Nov 15', value: 800},
-            {date: 'Nov 17', value: 950},
-            {date: 'Nov 19', value: 1100},
-            {date: 'Nov 21', value: 1300},
-            {date: 'Nov 23', value: 1550},
-            {date: 'Nov 25', value: 1750},
-            {date: 'Nov 27', value: 1900},
-            {date: 'Nov 29', value: 2200},
-            {date: 'Dec 1', value: 2500},
-            {date: 'Dec 3', value: 2850},
-            {date: 'Dec 5', value: 3400},
-            {date: 'Dec 7', value: 3800},
-            {date: 'Dec 8', value: 3891},
-            {date: 'Dec 9', value: 3650},
-            {date: 'Dec 11', value: 3300},
-            {date: 'Dec 13', value: 3100}
-        ];
-
-        // Chart dimensions
-        const margin = {top: 20, right: 40, bottom: 40, left: 60};
         const chartContainer = document.getElementById('mainChart');
-        if (chartContainer) {
-            d3.select('#mainChart').selectAll("*").remove();
-            const containerWidth = chartContainer.parentElement.offsetWidth - 48;
-            const width = containerWidth - margin.left - margin.right;
-            const height = 400 - margin.top - margin.bottom;
+        if (!chartContainer) return;
 
-            const svg = d3.select('#mainChart')
-                .attr('width', containerWidth)
-                .attr('height', 400)
-                .append('g')
-                .attr('transform', `translate(${margin.left},${margin.top})`);
+        const margin = { top: 20, right: 40, bottom: 40, left: 60 };
+        d3.select('#mainChart').selectAll('*').remove();
+        const containerWidth = chartContainer.parentElement.offsetWidth - 48;
+        const width = containerWidth - margin.left - margin.right;
+        const height = 400 - margin.top - margin.bottom;
 
-            const x = d3.scalePoint()
-                .domain(chartData.map(d => d.date))
-                .range([0, width]);
+        const svg = d3.select('#mainChart')
+            .attr('width', containerWidth)
+            .attr('height', 400)
+            .append('g')
+            .attr('transform', `translate(${margin.left},${margin.top})`);
 
-            const y = d3.scaleLinear()
-                .domain([0, 4000])
-                .range([height, 0]);
+        const x = d3.scalePoint().domain(chartData.map(d => d.date)).range([0, width]);
+        const maxVal = d3.max(chartData, d => d.value) || 100;
+        const y = d3.scaleLinear().domain([0, maxVal * 1.1]).range([height, 0]);
 
-            // Grid lines
-            svg.append('g')
-                .attr('class', 'grid')
-                .selectAll('line')
-                .data(y.ticks(5))
-                .enter()
-                .append('line')
-                .attr('x1', 0)
-                .attr('x2', width)
-                .attr('y1', d => y(d))
-                .attr('y2', d => y(d))
-                .attr('stroke', '#252836')
-                .attr('stroke-width', 1);
+        svg.append('g').attr('class', 'grid').selectAll('line').data(y.ticks(5)).enter().append('line')
+            .attr('x1', 0).attr('x2', width).attr('y1', d => y(d)).attr('y2', d => y(d))
+            .attr('stroke', '#252836').attr('stroke-width', 1);
 
-            // X-axis
-            svg.append('g')
-                .attr('transform', `translate(0,${height})`)
-                .call(d3.axisBottom(x).tickValues(['Nov 15', 'Nov 22', 'Nov 29', 'Dec 6', 'Dec 13']))
-                .call(g => g.select('.domain').remove())
-                .call(g => g.selectAll('.tick line').remove())
-                .call(g => g.selectAll('text')
-                    .attr('fill', '#6B7280')
-                    .attr('font-size', '12px')
-                    .attr('y', 12));
+        svg.append('g').attr('transform', `translate(0,${height})`).call(d3.axisBottom(x))
+            .call(g => g.select('.domain').remove()).call(g => g.selectAll('.tick line').remove())
+            .call(g => g.selectAll('text').attr('fill', '#6B7280').attr('font-size', '12px').attr('y', 12));
 
-            // Y-axis
-            svg.append('g')
-                .call(d3.axisLeft(y).ticks(5).tickFormat(d => d === 0 ? '0' : (d / 1000) + 'k'))
-                .call(g => g.select('.domain').remove())
-                .call(g => g.selectAll('.tick line').remove())
-                .call(g => g.selectAll('text')
-                    .attr('fill', '#6B7280')
-                    .attr('font-size', '12px')
-                    .attr('x', -10));
+        svg.append('g').call(d3.axisLeft(y).ticks(5).tickFormat(d => d === 0 ? '0' : d >= 1000 ? (d / 1000) + 'k' : d))
+            .call(g => g.select('.domain').remove()).call(g => g.selectAll('.tick line').remove())
+            .call(g => g.selectAll('text').attr('fill', '#6B7280').attr('font-size', '12px').attr('x', -10));
 
-            // Area
-            const area = d3.area()
-                .x(d => x(d.date))
-                .y0(height)
-                .y1(d => y(d.value))
-                .curve(d3.curveMonotoneX);
+        const area = d3.area().x(d => x(d.date)).y0(height).y1(d => y(d.value)).curve(d3.curveMonotoneX);
+        svg.append('path').datum(chartData).attr('fill', 'rgba(139, 92, 246, 0.08)').attr('d', area);
 
-            svg.append('path')
-                .datum(chartData)
-                .attr('fill', 'rgba(139, 92, 246, 0.08)')
-                .attr('d', area);
+        const line = d3.line().x(d => x(d.date)).y(d => y(d.value)).curve(d3.curveMonotoneX);
+        svg.append('path').datum(chartData).attr('fill', 'none').attr('stroke', '#8B5CF6').attr('stroke-width', 2).attr('d', line);
+    }, [isLoading, chartData]);
 
-            // Line
-            const line = d3.line()
-                .x(d => x(d.date))
-                .y(d => y(d.value))
-                .curve(d3.curveMonotoneX);
+    // Donut renderer — only runs when data exists
+    useEffect(() => {
+        if (isLoading || devices.length === 0) return;
 
-            svg.append('path')
-                .datum(chartData)
-                .attr('fill', 'none')
-                .attr('stroke', '#8B5CF6')
-                .attr('stroke-width', 2)
-                .attr('d', line);
-
-            // Tooltip interaction
-            const tooltip = d3.select('#chartTooltip');
-            const tooltipDate = d3.select('#tooltipDate');
-            const tooltipValue = d3.select('#tooltipValue');
-
-            const focus = svg.append('g')
-                .style('display', 'none');
-
-            focus.append('circle')
-                .attr('r', 4)
-                .attr('fill', '#8B5CF6')
-                .attr('stroke', '#F8FAFC')
-                .attr('stroke-width', 2);
-
-            svg.append('rect')
-                .attr('width', width)
-                .attr('height', height)
-                .style('fill', 'none')
-                .style('pointer-events', 'all')
-                .on('mouseover', () => {
-                    focus.style('display', null);
-                    tooltip.style('opacity', 1);
-                })
-                .on('mouseout', () => {
-                    focus.style('display', 'none');
-                    tooltip.style('opacity', 0);
-                })
-                .on('mousemove', function(event) {
-                    const [mouseX] = d3.pointer(event);
-                    const domain = x.domain();
-                    const range = x.range();
-                    const rangePoints = d3.range(range[0], range[1], (range[1] - range[0]) / (domain.length - 1));
-                    rangePoints.push(range[1]);
-                    
-                    const index = d3.bisect(rangePoints, mouseX);
-                    const d = chartData[Math.min(index, chartData.length - 1)];
-                    
-                    focus.attr('transform', `translate(${x(d.date)},${y(d.value)})`);
-                    
-                    tooltipDate.text(d.date);
-                    tooltipValue.text(d.value.toLocaleString() + ' clicks');
-                    
-                    const tooltipX = event.pageX - chartContainer.parentElement.offsetLeft;
-                    const tooltipY = event.pageY - chartContainer.parentElement.offsetTop - 80;
-                    
-                    tooltip
-                        .style('left', (tooltipX + 10) + 'px')
-                        .style('top', tooltipY + 'px');
-                });
-        }
-
-        // Donut chart function
-        function createDonutChart(elementId, data) {
-            const width = 160;
-            const height = 160;
+        function createDonutChart(elementId, data, total) {
+            const width = 160, height = 160;
             const radius = Math.min(width, height) / 2;
             const innerRadius = radius * 0.6;
-
             const targetSvg = d3.select(elementId);
-            targetSvg.selectAll("*").remove();
-
-            const svg = targetSvg
-                .attr('viewBox', `0 0 ${width} ${height}`);
-
-            const g = svg.append('g')
-                .attr('transform', `translate(${width / 2},${height / 2})`);
-
-            const color = d3.scaleOrdinal()
-                .range(data.map(d => d.color));
-
-            const pie = d3.pie()
-                .value(d => d.value)
-                .sort(null);
-
-            const arc = d3.arc()
-                .innerRadius(innerRadius)
-                .outerRadius(radius);
-
-            const arcs = g.selectAll('arc')
-                .data(pie(data))
-                .enter()
-                .append('g');
-
-            arcs.append('path')
-                .attr('d', arc)
-                .attr('fill', d => color(d.data.label));
-
-            // Center text
-            g.append('text')
-                .attr('text-anchor', 'middle')
-                .attr('dy', '-0.2em')
-                .attr('font-size', '20px')
-                .attr('font-weight', '700')
-                .attr('fill', '#F8FAFC')
-                .text('48.2k');
-
-            g.append('text')
-                .attr('text-anchor', 'middle')
-                .attr('dy', '1.2em')
-                .attr('font-size', '12px')
-                .attr('fill', '#6B7280')
-                .text('total');
+            targetSvg.selectAll('*').remove();
+            const svg = targetSvg.attr('viewBox', `0 0 ${width} ${height}`);
+            const g = svg.append('g').attr('transform', `translate(${width / 2},${height / 2})`);
+            const color = d3.scaleOrdinal().range(data.map(d => d.color));
+            const pie = d3.pie().value(d => d.value).sort(null);
+            const arc = d3.arc().innerRadius(innerRadius).outerRadius(radius);
+            g.selectAll('arc').data(pie(data)).enter().append('g').append('path')
+                .attr('d', arc).attr('fill', d => color(d.data.label));
+            g.append('text').attr('text-anchor', 'middle').attr('dy', '-0.2em')
+                .attr('font-size', '20px').attr('font-weight', '700').attr('fill', '#F8FAFC').text(total || '0');
+            g.append('text').attr('text-anchor', 'middle').attr('dy', '1.2em')
+                .attr('font-size', '12px').attr('fill', '#6B7280').text('total');
         }
 
-        // Devices donut chart
-        const devicesData = [
-            {label: 'Mobile', value: 58, color: '#8B5CF6'},
-            {label: 'Desktop', value: 31, color: '#06B6D4'},
-            {label: 'Tablet', value: 11, color: '#10B981'}
-        ];
-        createDonutChart('#devicesChart', devicesData);
+        createDonutChart('#devicesChart', devices, stats?.totalClicks?.toLocaleString());
+        createDonutChart('#browsersChart', browsers, stats?.totalClicks?.toLocaleString());
+    }, [isLoading, devices, browsers, stats]);
 
-        // Browsers donut chart
-        const browsersData = [
-            {label: 'Chrome', value: 52, color: '#8B5CF6'},
-            {label: 'Safari', value: 28, color: '#06B6D4'},
-            {label: 'Firefox', value: 12, color: '#10B981'},
-            {label: 'Other', value: 8, color: '#FBBF24'}
-        ];
-        createDonutChart('#browsersChart', browsersData);
-    }, [isLoading]);
+    const topLocation = locations[0];
+    const maxLocationCount = topLocation?.count || 1;
 
     return (
         <>
-            {/* Breadcrumb */}
-            <div className="breadcrumb">
-                <span>Links</span>
-                <i className="fas fa-chevron-right breadcrumb-arrow"></i>
-                <span>bkn.so/launch</span>
-            </div>
-
+            <ErrorNotice message={error} onRetry={fetchAnalytics} />
             {/* Page Header */}
             <header className="page-header">
                 <div className="page-header-left">
-                    <h1 className="page-title">Product Launch 2024</h1>
-                    <div className="short-link-pill">
-                        <span>bkn.so/launch</span>
-                        <i className="fas fa-copy copy-icon"></i>
-                    </div>
-                    <span className="status-badge active">Active</span>
+                    <h1 className="page-title">Analytics</h1>
+                    <div className="page-subtitle">Aggregate analytics across all your links.</div>
                 </div>
                 <div className="date-range-selector">
                     <i className="fas fa-calendar"></i>
@@ -297,24 +177,24 @@ const Analytics = () => {
                 <MetricCard 
                     iconClass="fas fa-mouse-pointer"
                     label="Total Clicks"
-                    value="48,234"
-                    delta="12.4%"
-                    deltaPositive={true}
-                    secondaryText="vs last period"
+                    value={stats?.totalClicks?.toLocaleString() || '0'}
+                    delta={stats?.clicksDelta}
+                    deltaPositive={stats?.clicksDeltaPositive}
+                    secondaryText={stats?.clicksSecondary}
                     isLoading={isLoading}
                 />
                 <MetricCard 
                     iconClass="fas fa-users"
                     label="Unique Visitors"
-                    value="32,451"
-                    secondaryText="67.3% of total clicks"
+                    value={stats?.uniqueVisitors?.toLocaleString() || '0'}
+                    secondaryText={stats?.visitorsSecondary}
                     isLoading={isLoading}
                 />
                 <MetricCard 
                     iconClass="fas fa-clock"
                     label="Last Clicked"
-                    value="2 mins ago"
-                    secondaryText="4:47 PM, Dec 14 2024"
+                    value={stats?.lastClicked || '—'}
+                    secondaryText={stats?.lastClickedTime}
                     isLoading={isLoading}
                 />
             </div>
@@ -324,16 +204,23 @@ const Analytics = () => {
                 <div className="chart-header">
                     <h2 className="chart-title">Clicks Over Time</h2>
                     <div className="time-toggles">
-                        <button className="pill-toggle">7D</button>
-                        <button className="pill-toggle active">30D</button>
-                        <button className="pill-toggle">90D</button>
-                        <button className="pill-toggle">1Y</button>
+                        {['7D', '30D', '90D', '1Y'].map(p => (
+                            <button key={p} className={`pill-toggle ${timePeriod === p ? 'active' : ''}`} onClick={() => setTimePeriod(p)}>
+                                {p}
+                            </button>
+                        ))}
                     </div>
                 </div>
                 {isLoading ? (
                     <div style={{ height: '400px', padding: '24px' }}>
                         <Skeleton height="100%" borderRadius="8px" />
                     </div>
+                ) : chartData.length === 0 ? (
+                    <EmptyState
+                        icon="fas fa-chart-area"
+                        title="No analytics data yet"
+                        description="Click data will appear here once your links start receiving traffic."
+                    />
                 ) : (
                     <>
                         <svg id="mainChart"></svg>
@@ -350,125 +237,74 @@ const Analytics = () => {
                 {/* Top Locations */}
                 <div className="breakdown-card">
                     <h3 className="breakdown-title">Top Locations</h3>
-                    <div className="location-row">
-                        <div className="location-left">
-                            <span className="location-flag">🇺🇸</span>
-                            <span className="location-name">United States</span>
+                    {locations.length === 0 ? (
+                        <div style={{ padding: '24px 0', color: '#6B7280', fontSize: '13px', textAlign: 'center' }}>
+                            No location data yet
                         </div>
-                        <span className="location-count">21,432</span>
-                        <div className="location-bar">
-                            <div className="location-bar-fill" style={{ width: '100%' }}></div>
-                        </div>
-                    </div>
-                    <div className="location-row">
-                        <div className="location-left">
-                            <span className="location-flag">🇬🇧</span>
-                            <span className="location-name">United Kingdom</span>
-                        </div>
-                        <span className="location-count">8,234</span>
-                        <div className="location-bar">
-                            <div className="location-bar-fill" style={{ width: '38%' }}></div>
-                        </div>
-                    </div>
-                    <div className="location-row">
-                        <div className="location-left">
-                            <span className="location-flag">🇨🇦</span>
-                            <span className="location-name">Canada</span>
-                        </div>
-                        <span className="location-count">5,891</span>
-                        <div className="location-bar">
-                            <div className="location-bar-fill" style={{ width: '27%' }}></div>
-                        </div>
-                    </div>
-                    <div className="location-row">
-                        <div className="location-left">
-                            <span className="location-flag">🇩🇪</span>
-                            <span className="location-name">Germany</span>
-                        </div>
-                        <span className="location-count">4,102</span>
-                        <div className="location-bar">
-                            <div className="location-bar-fill" style={{ width: '19%' }}></div>
-                        </div>
-                    </div>
-                    <div className="location-row">
-                        <div className="location-left">
-                            <span className="location-flag">🇦🇺</span>
-                            <span className="location-name">Australia</span>
-                        </div>
-                        <span className="location-count">3,891</span>
-                        <div className="location-bar">
-                            <div className="location-bar-fill" style={{ width: '18%' }}></div>
-                        </div>
-                    </div>
+                    ) : (
+                        locations.slice(0, 5).map((loc) => (
+                            <div className="location-row" key={loc.country}>
+                                <div className="location-left">
+                                    <span className="location-flag">{loc.flag}</span>
+                                    <span className="location-name">{loc.country}</span>
+                                </div>
+                                <span className="location-count">{loc.count.toLocaleString()}</span>
+                                <div className="location-bar">
+                                    <div className="location-bar-fill" style={{ width: `${(loc.count / maxLocationCount) * 100}%` }}></div>
+                                </div>
+                            </div>
+                        ))
+                    )}
                 </div>
 
                 {/* Devices */}
                 <div className="breakdown-card">
                     <h3 className="breakdown-title">Devices</h3>
-                    <div className="donut-container">
-                        <svg className="donut-chart" id="devicesChart"></svg>
-                        <div className="donut-legend">
-                            <div className="legend-row">
-                                <div className="legend-left">
-                                    <div className="legend-dot" style={{ background: '#8B5CF6' }}></div>
-                                    <span className="legend-label">Mobile</span>
-                                </div>
-                                <span className="legend-percent">58%</span>
-                            </div>
-                            <div className="legend-row">
-                                <div className="legend-left">
-                                    <div className="legend-dot" style={{ background: '#06B6D4' }}></div>
-                                    <span className="legend-label">Desktop</span>
-                                </div>
-                                <span className="legend-percent">31%</span>
-                            </div>
-                            <div className="legend-row">
-                                <div className="legend-left">
-                                    <div className="legend-dot" style={{ background: '#10B981' }}></div>
-                                    <span className="legend-label">Tablet</span>
-                                </div>
-                                <span className="legend-percent">11%</span>
+                    {devices.length === 0 ? (
+                        <div style={{ padding: '24px 0', color: '#6B7280', fontSize: '13px', textAlign: 'center' }}>
+                            No device data yet
+                        </div>
+                    ) : (
+                        <div className="donut-container">
+                            <svg className="donut-chart" id="devicesChart"></svg>
+                            <div className="donut-legend">
+                                {devices.map(d => (
+                                    <div className="legend-row" key={d.label}>
+                                        <div className="legend-left">
+                                            <div className="legend-dot" style={{ background: d.color }}></div>
+                                            <span className="legend-label">{d.label}</span>
+                                        </div>
+                                        <span className="legend-percent">{d.value}%</span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 {/* Browsers */}
                 <div className="breakdown-card">
                     <h3 className="breakdown-title">Browsers</h3>
-                    <div className="donut-container">
-                        <svg className="donut-chart" id="browsersChart"></svg>
-                        <div className="donut-legend">
-                            <div className="legend-row">
-                                <div className="legend-left">
-                                    <div className="legend-dot" style={{ background: '#8B5CF6' }}></div>
-                                    <span className="legend-label">Chrome</span>
-                                </div>
-                                <span className="legend-percent">52%</span>
-                            </div>
-                            <div className="legend-row">
-                                <div className="legend-left">
-                                    <div className="legend-dot" style={{ background: '#06B6D4' }}></div>
-                                    <span className="legend-label">Safari</span>
-                                </div>
-                                <span className="legend-percent">28%</span>
-                            </div>
-                            <div className="legend-row">
-                                <div className="legend-left">
-                                    <div className="legend-dot" style={{ background: '#10B981' }}></div>
-                                    <span className="legend-label">Firefox</span>
-                                </div>
-                                <span className="legend-percent">12%</span>
-                            </div>
-                            <div className="legend-row">
-                                <div className="legend-left">
-                                    <div className="legend-dot" style={{ background: '#FBBF24' }}></div>
-                                    <span className="legend-label">Other</span>
-                                </div>
-                                <span className="legend-percent">8%</span>
+                    {browsers.length === 0 ? (
+                        <div style={{ padding: '24px 0', color: '#6B7280', fontSize: '13px', textAlign: 'center' }}>
+                            No browser data yet
+                        </div>
+                    ) : (
+                        <div className="donut-container">
+                            <svg className="donut-chart" id="browsersChart"></svg>
+                            <div className="donut-legend">
+                                {browsers.map(b => (
+                                    <div className="legend-row" key={b.label}>
+                                        <div className="legend-left">
+                                            <div className="legend-dot" style={{ background: b.color }}></div>
+                                            <span className="legend-label">{b.label}</span>
+                                        </div>
+                                        <span className="legend-percent">{b.value}%</span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
 
@@ -476,7 +312,7 @@ const Analytics = () => {
             <div className="table-card">
                 <div className="table-header">
                     <h2 className="table-title">Clicks Log</h2>
-                    <button className="export-btn">
+                    <button className="export-btn" disabled={clicksLog.length === 0}>
                         <i className="fas fa-download"></i>
                         <span>Export</span>
                     </button>
@@ -495,79 +331,43 @@ const Analytics = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td className="td-primary">2 min ago</td>
-                            <td className="td-secondary">United States</td>
-                            <td className="td-secondary">New York</td>
-                            <td className="td-secondary">📱 Mobile</td>
-                            <td className="td-secondary">Chrome</td>
-                            <td className="td-secondary">iOS</td>
-                            <td className="td-secondary">twitter.com</td>
-                        </tr>
-                        <tr>
-                            <td className="td-primary">8 min ago</td>
-                            <td className="td-secondary">United Kingdom</td>
-                            <td className="td-secondary">London</td>
-                            <td className="td-secondary">💻 Desktop</td>
-                            <td className="td-secondary">Safari</td>
-                            <td className="td-secondary">macOS</td>
-                            <td className="td-secondary">google.com</td>
-                        </tr>
-                        <tr>
-                            <td className="td-primary">15 min ago</td>
-                            <td className="td-secondary">Canada</td>
-                            <td className="td-secondary">Toronto</td>
-                            <td className="td-secondary">💻 Desktop</td>
-                            <td className="td-secondary">Chrome</td>
-                            <td className="td-secondary">Windows</td>
-                            <td className="td-secondary">Direct</td>
-                        </tr>
-                        <tr>
-                            <td className="td-primary">24 min ago</td>
-                            <td className="td-secondary">Germany</td>
-                            <td className="td-secondary">Berlin</td>
-                            <td className="td-secondary">📱 Mobile</td>
-                            <td className="td-secondary">Safari</td>
-                            <td className="td-secondary">iOS</td>
-                            <td className="td-secondary">linkedin.com</td>
-                        </tr>
-                        <tr>
-                            <td className="td-primary">31 min ago</td>
-                            <td className="td-secondary">Australia</td>
-                            <td className="td-secondary">Sydney</td>
-                            <td className="td-secondary">💻 Desktop</td>
-                            <td className="td-secondary">Firefox</td>
-                            <td className="td-secondary">Windows</td>
-                            <td className="td-secondary">Direct</td>
-                        </tr>
-                        <tr>
-                            <td className="td-primary">47 min ago</td>
-                            <td className="td-secondary">United States</td>
-                            <td className="td-secondary">San Francisco</td>
-                            <td className="td-secondary">📱 Mobile</td>
-                            <td className="td-secondary">Chrome</td>
-                            <td className="td-secondary">Android</td>
-                            <td className="td-secondary td-truncate">t.co/abc123</td>
-                        </tr>
+                        {isLoading ? (
+                            Array.from({ length: 4 }).map((_, i) => (
+                                <tr key={i}>
+                                    <td><Skeleton width="70px" height="14px" /></td>
+                                    <td><Skeleton width="100px" height="14px" /></td>
+                                    <td><Skeleton width="80px" height="14px" /></td>
+                                    <td><Skeleton width="80px" height="14px" /></td>
+                                    <td><Skeleton width="60px" height="14px" /></td>
+                                    <td><Skeleton width="60px" height="14px" /></td>
+                                    <td><Skeleton width="90px" height="14px" /></td>
+                                </tr>
+                            ))
+                        ) : clicksLog.length === 0 ? (
+                            <tr>
+                                <td colSpan="7" style={{ padding: 0, border: 'none' }}>
+                                    <EmptyState
+                                        icon="fas fa-stream"
+                                        title="No clicks recorded"
+                                        description="Individual click events will appear here in real time."
+                                    />
+                                </td>
+                            </tr>
+                        ) : (
+                            clicksLog.map((click) => (
+                                <tr key={click.id}>
+                                    <td className="td-primary">{click.time}</td>
+                                    <td className="td-secondary">{click.country}</td>
+                                    <td className="td-secondary">{click.city}</td>
+                                    <td className="td-secondary">{click.device}</td>
+                                    <td className="td-secondary">{click.browser}</td>
+                                    <td className="td-secondary">{click.os}</td>
+                                    <td className="td-secondary td-truncate">{click.referrer}</td>
+                                </tr>
+                            ))
+                        )}
                     </tbody>
                 </table>
-
-                <div className="pagination-footer">
-                    <div className="pagination-info">Showing 1–6 of 48,234 clicks</div>
-                    <div className="pagination-controls">
-                        <button className="pagination-btn" disabled>
-                            <i className="fas fa-chevron-left"></i>
-                        </button>
-                        <button className="pagination-btn active">1</button>
-                        <button className="pagination-btn">2</button>
-                        <button className="pagination-btn">3</button>
-                        <button className="pagination-btn">4</button>
-                        <button className="pagination-btn">5</button>
-                        <button className="pagination-btn">
-                            <i className="fas fa-chevron-right"></i>
-                        </button>
-                    </div>
-                </div>
             </div>
         </>
     );

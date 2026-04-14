@@ -1,7 +1,42 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import QRCode from 'qrcode';
+import useClipboard from '../../hooks/useClipboard';
 
-const CreateLinkSuccessModal = ({ isOpen, onClose }) => {
+const CreateLinkSuccessModal = ({ isOpen, onClose, link }) => {
+    const navigate = useNavigate();
+    const { copied, copy } = useClipboard();
+    const [qrDataUrl, setQrDataUrl] = useState('');
+
     if (!isOpen) return null;
+
+    const shortUrl = link?.shortUrl || '';
+    const destinationUrl = link?.destinationUrl || '';
+
+    useEffect(() => {
+        let isMounted = true;
+        const generateQr = async () => {
+            if (!shortUrl) {
+                setQrDataUrl('');
+                return;
+            }
+
+            try {
+                const result = await QRCode.toDataURL(shortUrl, {
+                    width: 220,
+                    margin: 1
+                });
+                if (isMounted) setQrDataUrl(result);
+            } catch (error) {
+                if (isMounted) setQrDataUrl('');
+            }
+        };
+
+        generateQr();
+        return () => {
+            isMounted = false;
+        };
+    }, [shortUrl]);
 
     return (
         <div className="modal-overlay active" onClick={onClose}>
@@ -23,8 +58,8 @@ const CreateLinkSuccessModal = ({ isOpen, onClose }) => {
                         <div>
                             <h3 className="success-section-title">Your link is live</h3>
                             <div className="link-display">
-                                <span className="link-text">bkn.so/launch</span>
-                                <button className="copy-icon-btn">
+                                <span className="link-text">{shortUrl}</span>
+                                <button className="copy-icon-btn" onClick={() => copy(shortUrl)}>
                                     <i className="fas fa-copy"></i>
                                 </button>
                             </div>
@@ -32,15 +67,15 @@ const CreateLinkSuccessModal = ({ isOpen, onClose }) => {
 
                         <div className="destination-info">
                             <div className="destination-label">Destination URL</div>
-                            <div className="destination-url">https://example.com/product-launch-2024</div>
+                            <div className="destination-url">{destinationUrl}</div>
                         </div>
 
                         <div className="action-buttons">
-                            <button className="btn-copy">
+                            <button className="btn-copy" onClick={() => copy(shortUrl)}>
                                 <i className="fas fa-copy"></i>
-                                <span>Copy Link</span>
+                                <span>{copied ? 'Copied' : 'Copy Link'}</span>
                             </button>
-                            <button className="btn-analytics">
+                            <button className="btn-analytics" onClick={() => navigate(`/analytics/${link?.shortCode}`)}>
                                 <span>View Analytics</span>
                                 <i className="fas fa-arrow-right"></i>
                             </button>
@@ -57,53 +92,20 @@ const CreateLinkSuccessModal = ({ isOpen, onClose }) => {
 
                     <div className="success-right-column">
                         <div className="qr-card">
-                            <svg className="qr-code" viewBox="0 0 80 80">
-                                <rect width="80" height="80" fill="#161921"></rect>
-                                <rect x="4" y="4" width="20" height="20" fill="#F8FAFC" rx="2"></rect>
-                                <rect x="8" y="8" width="12" height="12" fill="#161921" rx="1"></rect>
-                                <rect x="10" y="10" width="8" height="8" fill="#F8FAFC"></rect>
-                                
-                                <rect x="56" y="4" width="20" height="20" fill="#F8FAFC" rx="2"></rect>
-                                <rect x="60" y="8" width="12" height="12" fill="#161921" rx="1"></rect>
-                                <rect x="62" y="10" width="8" height="8" fill="#F8FAFC"></rect>
-                                
-                                <rect x="4" y="56" width="20" height="20" fill="#F8FAFC" rx="2"></rect>
-                                <rect x="8" y="60" width="12" height="12" fill="#161921" rx="1"></rect>
-                                <rect x="10" y="62" width="8" height="8" fill="#F8FAFC"></rect>
-                                
-                                <rect x="28" y="4" width="3" height="3" fill="#F8FAFC"></rect>
-                                <rect x="32" y="4" width="3" height="3" fill="#F8FAFC"></rect>
-                                <rect x="40" y="4" width="3" height="3" fill="#F8FAFC"></rect>
-                                <rect x="48" y="4" width="3" height="3" fill="#F8FAFC"></rect>
-                                
-                                <rect x="4" y="28" width="3" height="3" fill="#F8FAFC"></rect>
-                                <rect x="4" y="32" width="3" height="3" fill="#F8FAFC"></rect>
-                                <rect x="4" y="40" width="3" height="3" fill="#F8FAFC"></rect>
-                                <rect x="4" y="48" width="3" height="3" fill="#F8FAFC"></rect>
-                                
-                                <rect x="28" y="28" width="3" height="3" fill="#F8FAFC"></rect>
-                                <rect x="32" y="28" width="3" height="3" fill="#F8FAFC"></rect>
-                                <rect x="36" y="28" width="3" height="3" fill="#F8FAFC"></rect>
-                                <rect x="40" y="28" width="3" height="3" fill="#F8FAFC"></rect>
-                                <rect x="44" y="28" width="3" height="3" fill="#F8FAFC"></rect>
-                                <rect x="48" y="28" width="3" height="3" fill="#F8FAFC"></rect>
-                                
-                                <rect x="28" y="32" width="3" height="3" fill="#F8FAFC"></rect>
-                                <rect x="36" y="32" width="3" height="3" fill="#F8FAFC"></rect>
-                                <rect x="44" y="32" width="3" height="3" fill="#F8FAFC"></rect>
-                                <rect x="48" y="32" width="3" height="3" fill="#F8FAFC"></rect>
-                                
-                                <rect x="28" y="36" width="3" height="3" fill="#F8FAFC"></rect>
-                                <rect x="32" y="36" width="3" height="3" fill="#F8FAFC"></rect>
-                                <rect x="40" y="36" width="3" height="3" fill="#F8FAFC"></rect>
-                            </svg>
-                            <div className="qr-label">bkn.so/launch</div>
+                            {qrDataUrl ? (
+                                <img className="qr-code" src={qrDataUrl} alt="QR code for short link" />
+                            ) : (
+                                <div className="qr-code" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280', fontSize: '12px' }}>
+                                    QR unavailable
+                                </div>
+                            )}
+                            <div className="qr-label">{shortUrl}</div>
                             
                             <div className="qr-divider"></div>
                             
                             <div className="stat-row">
                                 <span className="stat-label">Created on</span>
-                                <span className="stat-value">Oct 24, 2024</span>
+                                <span className="stat-value">{new Date().toLocaleDateString()}</span>
                             </div>
                             <div className="stat-row">
                                 <span className="stat-label">Workspace</span>

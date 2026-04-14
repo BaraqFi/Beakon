@@ -2,88 +2,132 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopNav from '../components/layout/TopNav';
 import Footer from '../components/layout/Footer';
+import api from '../services/api';
+import useClipboard from '../hooks/useClipboard';
 
 const LandingPage = () => {
     const [urlInput, setUrlInput] = useState('');
     const [shake, setShake] = useState(false);
+    const [createdGuestLink, setCreatedGuestLink] = useState(null);
+    const [creating, setCreating] = useState(false);
     const navigate = useNavigate();
+    const { copied, copy } = useClipboard();
 
-    const handleShorten = () => {
+    const handleShorten = async () => {
         if (!urlInput.trim()) {
             setShake(true);
             setTimeout(() => setShake(false), 600);
             return;
         }
-        sessionStorage.setItem('pendingUrl', urlInput);
-        navigate('/signup?url=' + encodeURIComponent(urlInput));
+
+        setCreating(true);
+        try {
+            const { data } = await api.post('/api/links/guest', {
+                originalUrl: urlInput.trim()
+            });
+
+            const raw = data.link;
+            const guestLink = {
+                id: raw._id,
+                shortCode: raw.shortCode,
+                shortUrl: `${window.location.origin.replace(/\/$/, '')}/${raw.shortCode}`,
+                destinationUrl: raw.originalUrl,
+                createdAt: raw.createdAt
+            };
+            setCreatedGuestLink(guestLink);
+
+            const existing = JSON.parse(localStorage.getItem('beakon_guest_links') || '[]');
+            localStorage.setItem('beakon_guest_links', JSON.stringify([guestLink, ...existing]));
+        } catch (error) {
+            setShake(true);
+            setTimeout(() => setShake(false), 600);
+        } finally {
+            setCreating(false);
+        }
     };
 
     return (
         <div>
             <TopNav />
             
-            <section className="hero-section">
-                <h1 className="hero-headline">Know exactly who clicked your link.</h1>
-                <p className="hero-subtitle">Paste any URL. Get a short trackable link. See every click, device, and location in real time.</p>
-                
-                <div className="input-container">
-                    <div 
-                        className="input-bar" 
-                        style={shake ? { animation: 'shake 0.5s ease-in-out', borderColor: '#DC2626' } : {}}
-                    >
-                        <input 
-                            type="text" 
-                            className="url-input" 
-                            placeholder="Paste your destination URL…" 
-                            value={urlInput}
-                            onChange={(e) => setUrlInput(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleShorten()}
-                        />
-                        <button className="btn-shorten" onClick={handleShorten}>Shorten & Track</button>
-                    </div>
-                    <p className="helper-text">Free to start. No credit card required.</p>
-                </div>
-            </section>
+            <section className="hero-stage">
+                <img src="/hero.PNG" alt="" className="hero-bg-image" aria-hidden="true" />
 
-            <section className="feature-strip">
-                <div className="feature-card">
-                    <div className="feature-icon">
-                        <i className="fas fa-mouse-pointer"></i>
+                <section className="hero-section">
+                    <h1 className="hero-headline">Know exactly who clicked your link.</h1>
+                    <p className="hero-subtitle">Paste any URL. Get a short trackable link. See every click, device, and location in real time.</p>
+                    
+                    <div className="input-container">
+                        <div 
+                            className="input-bar" 
+                            style={shake ? { animation: 'shake 0.5s ease-in-out', borderColor: '#DC2626' } : {}}
+                        >
+                            <input 
+                                type="text" 
+                                className="url-input" 
+                                placeholder="Paste your destination URL…" 
+                                value={urlInput}
+                                onChange={(e) => setUrlInput(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleShorten()}
+                            />
+                            <button className="btn-shorten" onClick={handleShorten} disabled={creating}>
+                                {creating ? 'Creating...' : 'Shorten & Track'}
+                            </button>
+                        </div>
+                        {createdGuestLink ? (
+                            <div className="helper-text" style={{ display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                <span>{createdGuestLink.shortUrl}</span>
+                                <button className="btn-ghost" onClick={() => copy(createdGuestLink.shortUrl)}>
+                                    {copied ? 'Copied' : 'Copy'}
+                                </button>
+                                <button className="btn-ghost" onClick={() => navigate('/signup')}>
+                                    Sign up to view analytics
+                                </button>
+                            </div>
+                        ) : (
+                            <p className="helper-text">Free to start. No credit card required.</p>
+                        )}
                     </div>
-                    <h3 className="feature-title">Track Any URL</h3>
-                    <p className="feature-description">Wrap any link in seconds and start collecting click data immediately.</p>
-                </div>
+                </section>
 
-                <div className="feature-card">
-                    <div className="feature-icon">
-                        <i className="fas fa-chart-bar"></i>
+                <section className="feature-strip hero-feature-strip">
+                    <div className="feature-card">
+                        <div className="feature-icon">
+                            <i className="fas fa-mouse-pointer"></i>
+                        </div>
+                        <h3 className="feature-title">Track Any URL</h3>
+                        <p className="feature-description">Wrap any link in seconds and start collecting click data immediately.</p>
                     </div>
-                    <h3 className="feature-title">Real-Time Analytics</h3>
-                    <p className="feature-description">Watch clicks roll in live. Clicks, sessions, and engagement updated instantly.</p>
-                </div>
 
-                <div className="feature-card">
-                    <div className="feature-icon">
-                        <i className="fas fa-globe"></i>
+                    <div className="feature-card">
+                        <div className="feature-icon">
+                            <i className="fas fa-chart-bar"></i>
+                        </div>
+                        <h3 className="feature-title">Real-Time Analytics</h3>
+                        <p className="feature-description">Watch clicks roll in live. Clicks, sessions, and engagement updated instantly.</p>
                     </div>
-                    <h3 className="feature-title">Geo + Device Breakdown</h3>
-                    <p className="feature-description">See where your audience is coming from — country, city, browser, and device type.</p>
-                </div>
-            </section>
 
-            <section className="social-proof">
-                <div className="proof-stats">
-                    <div className="stat-item">
-                        <div className="stat-value">1.2M+</div>
-                        <div className="stat-label">Clicks Tracked</div>
+                    <div className="feature-card">
+                        <div className="feature-icon">
+                            <i className="fas fa-globe"></i>
+                        </div>
+                        <h3 className="feature-title">Geo + Device Breakdown</h3>
+                        <p className="feature-description">See where your audience is coming from — country, city, browser, and device type.</p>
                     </div>
-                    <div className="stat-item">
-                        <div className="stat-value">15K+</div>
-                        <div className="stat-label">Active Links</div>
+                </section>
+
+                <div className="hero-social-proof">
+                    <div className="hero-stat-item">
+                        <div className="hero-stat-value">1.2M+</div>
+                        <div className="hero-stat-label">Clicks Tracked</div>
                     </div>
-                    <div className="stat-item">
-                        <div className="stat-value">2.4K+</div>
-                        <div className="stat-label">Happy Users</div>
+                    <div className="hero-stat-item">
+                        <div className="hero-stat-value">15K+</div>
+                        <div className="hero-stat-label">Active Links</div>
+                    </div>
+                    <div className="hero-stat-item">
+                        <div className="hero-stat-value">2.4K+</div>
+                        <div className="hero-stat-label">Happy Users</div>
                     </div>
                 </div>
             </section>

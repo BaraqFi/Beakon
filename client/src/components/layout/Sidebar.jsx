@@ -66,10 +66,10 @@ const Sidebar = ({ isOpen, onClose }) => {
             </nav>
 
             <div className="sidebar-user" style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setShowPopover(!showPopover)}>
-                <div className="user-avatar">{user?.initials || 'AM'}</div>
+                <div className="user-avatar">{user?.initials || (user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : '?')}</div>
                 <div className="user-info">
-                    <div className="user-name">{user?.name || 'Alex Morgan'}</div>
-                    <span className="user-plan">{user?.plan || 'Pro'} Plan</span>
+                    <div className="user-name">{user?.name || 'Guest'}</div>
+                    <span className="user-plan">{user?.plan || 'Free'} Plan</span>
                 </div>
 
                 {showPopover && (
