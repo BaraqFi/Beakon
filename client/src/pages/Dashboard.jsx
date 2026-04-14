@@ -7,6 +7,7 @@ import EmptyState from '../components/ui/EmptyState';
 import ErrorNotice from '../components/ui/ErrorNotice';
 import CreateLinkModal from '../components/modals/CreateLinkModal';
 import CreateLinkSuccessModal from '../components/modals/CreateLinkSuccessModal';
+import { buildShortUrl } from '../utils/shortUrl';
 
 const Dashboard = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -45,7 +46,7 @@ const Dashboard = () => {
                 ? {
                     id: data.link._id,
                     shortCode: data.link.shortCode,
-                    shortUrl: `${window.location.origin.replace(/\/$/, '')}/${data.link.shortCode}`,
+                    shortUrl: buildShortUrl(data.link.shortCode),
                     destinationUrl: data.link.originalUrl,
                     title: data.link.title || data.link.originalUrl,
                     tags: data.link.tags || [],

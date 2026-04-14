@@ -1032,10 +1032,26 @@ td {
   z-index: 100
 }
 
+.top-nav-logo {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .nav-actions {
   display: flex;
   gap: 12px;
   align-items: center;
+  min-height: 34px;
+}
+
+.nav-auth-btn {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .btn-ghost {
@@ -1193,6 +1209,59 @@ td {
   font-size: 12px;
   color: #6b7280;
   text-align: center
+}
+.guest-link-result-panel {
+  margin-top: 10px;
+  background: rgba(30, 34, 48, 0.92);
+  border: 1px solid #252836;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+.guest-link-result-header {
+  display: flex;
+  justify-content: flex-start;
+}
+.guest-link-result-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 9999px;
+  padding: 4px 9px;
+}
+.guest-link-result-url-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.guest-link-result-url {
+  flex: 1;
+  min-width: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: #a78bfa;
+  background: #161921;
+  border: 1px solid #252836;
+  border-radius: 8px;
+  padding: 10px 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.guest-link-result-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.guest-link-action-btn {
+  min-width: 132px;
 }
 .feature-strip {
   max-width: 960px;
@@ -1444,6 +1513,13 @@ td {
     padding: 9px 14px;
     min-height: 52px
   }
+  .nav-actions {
+    gap: 8px;
+  }
+  .nav-auth-btn {
+    min-width: 84px;
+    padding: 0 12px;
+  }
   .hero-section {
     padding: 140px 20px 80px
   }
@@ -1459,6 +1535,16 @@ td {
   .btn-shorten {
     width: 100%;
     padding: 14px 24px
+  }
+  .guest-link-result-url-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .guest-link-result-actions {
+    justify-content: stretch;
+  }
+  .guest-link-action-btn {
+    width: 100%;
   }
   .preview-metrics {
     grid-template-columns: 1fr
@@ -4066,7 +4152,7 @@ input {
 .login-auth-container {
   min-height: 100vh;
   position: relative;
-  background: #16112a;
+  background: #0f1117;
   display: flex;
 }
 
@@ -4077,7 +4163,7 @@ input {
   bottom: 0;
   left: 50%;
   width: 1px;
-  background: linear-gradient(180deg, transparent 0%, rgba(167, 139, 250, 0.22) 15%, rgba(139, 92, 246, 0.22) 85%, transparent 100%);
+  background: linear-gradient(180deg, transparent 0%, rgba(139, 92, 246, 0.2) 15%, rgba(99, 102, 241, 0.2) 85%, transparent 100%);
   transform: translateX(-0.5px);
   z-index: 1;
   pointer-events: none;
@@ -4103,7 +4189,7 @@ input {
   top: 40%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.28) 0%, rgba(109, 40, 217, 0.12) 40%, transparent 68%);
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.24) 0%, rgba(99, 102, 241, 0.1) 40%, transparent 68%);
   z-index: 0;
   pointer-events: none;
 }
@@ -4177,9 +4263,9 @@ input {
   width: 64px;
   height: 64px;
   font-size: 26px;
-  background: #7c3aed;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
   border-radius: 16px;
-  box-shadow: 0 10px 28px rgba(124, 58, 237, 0.4);
+  box-shadow: 0 10px 28px rgba(139, 92, 246, 0.35);
 }
 
 .login-left-content .brand-name {
@@ -4209,17 +4295,17 @@ input {
 .login-auth-card {
   width: 100%;
   max-width: 400px;
-  background: rgba(24, 16, 50, 0.7);
-  border: 1px solid rgba(139, 92, 246, 0.18);
+  background: rgba(26, 34, 53, 0.78);
+  border: 1px solid #252836;
   border-radius: 20px;
   padding: 40px 36px 36px;
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
-  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(167, 139, 250, 0.06);
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(139, 92, 246, 0.08);
 }
 
 .login-auth-card .auth-title {
-  color: #a855f7;
+  color: #f8fafc;
   font-size: 26px;
   font-weight: 700;
   margin-bottom: 28px;
@@ -4228,7 +4314,7 @@ input {
 }
 
 .login-auth-card .form-label {
-  color: #e2e8f0;
+  color: #94a3b8;
   font-size: 13px;
   margin-bottom: 8px;
   font-weight: 500;
@@ -4244,9 +4330,9 @@ input {
 }
 
 .login-auth-card .form-input {
-  background: rgba(10, 8, 30, 0.6);
-  border: 1px solid rgba(139, 92, 246, 0.12);
-  color: #f1f5f9;
+  background: #1e2230;
+  border: 1px solid #252836;
+  color: #d1d5db;
   font-size: 14px;
   border-radius: 10px;
   height: 50px;
@@ -4254,23 +4340,23 @@ input {
   width: 100%;
 }
 .login-auth-card .form-input:hover {
-  border-color: rgba(139, 92, 246, 0.25);
+  border-color: #2d3548;
 }
 
 .login-auth-card .form-input:focus {
   border-color: #8b5cf6;
-  background: rgba(15, 20, 35, 0.8);
-  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.2);
+  background: #1e2230;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
 }
 
 .login-auth-card .form-input::placeholder {
-  color: #64748b;
+  color: #6b7280;
 }
 
 .login-auth-card .btn-continue {
   margin-top: 8px;
   height: 50px;
-  background: #7c3aed;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
   border-radius: 10px;
   font-size: 15px;
   font-weight: 600;
@@ -4280,9 +4366,9 @@ input {
 }
 
 .login-auth-card .btn-continue:hover {
-  background: #6d28d9;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
   transform: translateY(-1px);
-  box-shadow: 0 10px 28px rgba(109, 40, 217, 0.45);
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.3);
 }
 
 .login-auth-card .btn-continue:focus {
@@ -4331,13 +4417,13 @@ input {
 }
 
 .auth-signup-row .auth-link {
-  color: #a855f7;
+  color: #8b5cf6;
   font-weight: 600;
   margin-left: 4px;
 }
 
 .auth-forgot-row .auth-link {
-  color: #a855f7;
+  color: #8b5cf6;
   font-size: 14px;
   font-weight: 500;
 }
@@ -4356,8 +4442,8 @@ input {
 .login-auth-card .form-input:-webkit-autofill:hover,
 .login-auth-card .form-input:-webkit-autofill:focus,
 .login-auth-card .form-input:-webkit-autofill:active {
-  -webkit-text-fill-color: #f1f5f9;
-  box-shadow: 0 0 0 1000px rgba(15, 20, 35, 0.6) inset;
+  -webkit-text-fill-color: #d1d5db;
+  box-shadow: 0 0 0 1000px #1e2230 inset;
   transition: background-color 9999s ease-in-out 0s;
 }
 

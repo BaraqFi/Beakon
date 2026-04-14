@@ -15,7 +15,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     return (
         <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Link to="/links" className="logo" style={{ textDecoration: 'none', marginBottom: 0 }}>
+                <Link to="/" className="logo" style={{ textDecoration: 'none', marginBottom: 0 }}>
                     <div className="logo-icon">
                         <i className="fas fa-tower-broadcast"></i>
                     </div>

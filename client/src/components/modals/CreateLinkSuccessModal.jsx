@@ -8,8 +8,6 @@ const CreateLinkSuccessModal = ({ isOpen, onClose, link }) => {
     const { copied, copy } = useClipboard();
     const [qrDataUrl, setQrDataUrl] = useState('');
 
-    if (!isOpen) return null;
-
     const shortUrl = link?.shortUrl || '';
     const destinationUrl = link?.destinationUrl || '';
 
@@ -37,6 +35,8 @@ const CreateLinkSuccessModal = ({ isOpen, onClose, link }) => {
             isMounted = false;
         };
     }, [shortUrl]);
+
+    if (!isOpen) return null;
 
     return (
         <div className="modal-overlay active" onClick={onClose}>

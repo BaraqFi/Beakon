@@ -1,6 +1,7 @@
 import { useState, useCallback, useContext, useEffect } from 'react';
 import api from '../services/api';
 import AuthContext from '../context/AuthContext';
+import { buildShortUrl } from '../utils/shortUrl';
 
 export default function useLinks() {
   const getGuestShortCodes = useCallback(() => {
@@ -53,7 +54,7 @@ export default function useLinks() {
         : {
             id: raw._id || raw.id,
             shortCode: raw.shortCode,
-            shortUrl: `${window.location.origin.replace(/\/$/, '')}/${raw.shortCode}`,
+            shortUrl: buildShortUrl(raw.shortCode),
             destinationUrl: raw.originalUrl || raw.destinationUrl,
             title: raw.title || raw.originalUrl,
             tags: raw.tags || [],

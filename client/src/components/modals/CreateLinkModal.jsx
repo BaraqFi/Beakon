@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 
 const CreateLinkModal = ({ isOpen, onClose, onCreate }) => {
     const [originalUrl, setOriginalUrl] = useState('');
@@ -8,12 +8,9 @@ const CreateLinkModal = ({ isOpen, onClose, onCreate }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
 
-    if (!isOpen) return null;
+    const parsedTags = tagsInput.split(',').map((t) => t.trim()).filter(Boolean);
 
-    const parsedTags = useMemo(
-        () => tagsInput.split(',').map((t) => t.trim()).filter(Boolean),
-        [tagsInput]
-    );
+    if (!isOpen) return null;
 
     const resetForm = () => {
         setOriginalUrl('');

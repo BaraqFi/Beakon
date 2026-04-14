@@ -4,6 +4,7 @@ import TopNav from '../components/layout/TopNav';
 import Footer from '../components/layout/Footer';
 import api from '../services/api';
 import useClipboard from '../hooks/useClipboard';
+import { buildShortUrl } from '../utils/shortUrl';
 
 const LandingPage = () => {
     const [urlInput, setUrlInput] = useState('');
@@ -30,7 +31,7 @@ const LandingPage = () => {
             const guestLink = {
                 id: raw._id,
                 shortCode: raw.shortCode,
-                shortUrl: `${window.location.origin.replace(/\/$/, '')}/${raw.shortCode}`,
+                shortUrl: buildShortUrl(raw.shortCode),
                 destinationUrl: raw.originalUrl,
                 createdAt: raw.createdAt
             };
@@ -75,14 +76,24 @@ const LandingPage = () => {
                             </button>
                         </div>
                         {createdGuestLink ? (
-                            <div className="helper-text" style={{ display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
-                                <span>{createdGuestLink.shortUrl}</span>
-                                <button className="btn-ghost" onClick={() => copy(createdGuestLink.shortUrl)}>
-                                    {copied ? 'Copied' : 'Copy'}
-                                </button>
-                                <button className="btn-ghost" onClick={() => navigate('/signup')}>
-                                    Sign up to view analytics
-                                </button>
+                            <div className="guest-link-result-panel">
+                                <div className="guest-link-result-header">
+                                    <span className="guest-link-result-badge">
+                                        <i className="fas fa-check-circle" aria-hidden="true"></i>
+                                        Link created
+                                    </span>
+                                </div>
+                                <div className="guest-link-result-url-row">
+                                    <span className="guest-link-result-url" title={createdGuestLink.shortUrl}>{createdGuestLink.shortUrl}</span>
+                                    <button className="btn-ghost guest-link-action-btn" onClick={() => copy(createdGuestLink.shortUrl)}>
+                                        {copied ? 'Copied' : 'Copy'}
+                                    </button>
+                                </div>
+                                <div className="guest-link-result-actions">
+                                    <button className="btn-ghost guest-link-action-btn" onClick={() => navigate('/signup')}>
+                                        Sign up to view analytics
+                                    </button>
+                                </div>
                             </div>
                         ) : (
                             <p className="helper-text">Free to start. No credit card required.</p>

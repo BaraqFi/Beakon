@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import Skeleton from '../components/ui/Skeleton';
 import EmptyState from '../components/ui/EmptyState';
@@ -20,7 +20,8 @@ const Audiences = () => {
         setError('');
         try {
             const linksRes = await api.get('/api/links');
-            const links = Array.isArray(linksRes.data) ? linksRes.data : [];
+            const linksPayload = linksRes.data?.data || linksRes.data;
+            const links = Array.isArray(linksPayload) ? linksPayload : [];
 
             if (links.length === 0) {
                 setCountryData({});
@@ -30,36 +31,32 @@ const Audiences = () => {
             }
 
             const linkIds = links.map((link) => link.id || link._id).filter(Boolean);
-            const analyticsResponses = await Promise.all(
+            const analyticsResponses = await Promise.allSettled(
                 linkIds.map((id) => api.get(`/api/analytics/${id}`))
             );
 
             const combinedCountry = {};
             const combinedCityByCountry = {};
-            const combinedDevice = {};
             let totalClicks = 0;
 
             analyticsResponses.forEach((response) => {
-                const stats = response.data?.stats || {};
+                if (response.status !== 'fulfilled') return;
+                const stats = response.value.data?.stats || {};
                 totalClicks += stats.totalClicks || 0;
 
                 (stats.byCountry || []).forEach((row) => {
                     const country = row._id || 'Unknown';
                     combinedCountry[country] = (combinedCountry[country] || 0) + row.count;
                 });
-
-                (stats.byDevice || []).forEach((row) => {
-                    const device = row._id || 'Unknown';
-                    combinedDevice[device] = (combinedDevice[device] || 0) + row.count;
-                });
             });
 
-            const clicksPages = await Promise.all(
+            const clicksPages = await Promise.allSettled(
                 linkIds.map((id) => api.get(`/api/analytics/${id}/clicks?limit=200`))
             );
 
             clicksPages.forEach((response) => {
-                (response.data?.clicks || []).forEach((click) => {
+                if (response.status !== 'fulfilled') return;
+                (response.value.data?.clicks || []).forEach((click) => {
                     const country = click.country || 'Unknown';
                     const city = click.city || 'Unknown';
                     if (!combinedCityByCountry[country]) combinedCityByCountry[country] = {};

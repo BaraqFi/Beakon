@@ -3,79 +3,54 @@ import { useNavigate, Link } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 
 const SignUp = () => {
-    const navigate = useNavigate();
-    const { register } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [emailError, setEmailError] = useState(false);
-    const [passwordError, setPasswordError] = useState(false);
-    const [emailValid, setEmailValid] = useState(false);
-    const [passwordValid, setPasswordValid] = useState(false);
+    const [errors, setErrors] = useState({});
+    const navigate = useNavigate();
+    const { register } = useAuth();
 
-    const handleEmailChange = (e) => {
-        const val = e.target.value.trim();
-        setEmail(val);
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (val && !emailRegex.test(val)) {
-            setEmailError(true);
-            setEmailValid(false);
-        } else if (val && emailRegex.test(val)) {
-            setEmailError(false);
-            setEmailValid(true);
-        } else {
-            setEmailError(false);
-            setEmailValid(false);
-        }
-    };
-
-    const handlePasswordChange = (e) => {
-        const val = e.target.value;
-        setPassword(val);
-        if (val && val.length < 8) {
-            setPasswordError(true);
-            setPasswordValid(false);
-        } else if (val && val.length >= 8) {
-            setPasswordError(false);
-            setPasswordValid(true);
-        } else {
-            setPasswordError(false);
-            setPasswordValid(false);
-        }
-    };
+    const validateEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!emailValid || !passwordValid) return;
+        const trimmedEmail = email.trim();
+        const nextErrors = {};
+
+        if (!trimmedEmail || !validateEmail(trimmedEmail)) {
+            nextErrors.email = true;
+        }
+        if (!password.trim() || password.length < 8) {
+            nextErrors.password = true;
+        }
+
+        if (Object.keys(nextErrors).length > 0) {
+            setErrors(nextErrors);
+            return;
+        }
+
+        setErrors({});
         setIsLoading(true);
         try {
-            await register({ email, password, name: email.split('@')[0] });
+            await register({ email: trimmedEmail, password, name: trimmedEmail.split('@')[0] });
             navigate('/dashboard');
         } catch (error) {
             console.error('Registration failed:', error);
-            setEmailError(true);
+            setErrors({ form: true });
         } finally {
             setIsLoading(false);
         }
     };
 
-    const getEmailStyles = () => {
-        if (emailError) return { borderColor: '#DC2626' };
-        if (emailValid) return { borderColor: '#10B981' };
-        return {};
-    };
-
-    const getPasswordStyles = () => {
-        if (passwordError) return { borderColor: '#F59E0B' };
-        if (passwordValid) return { borderColor: '#10B981' };
-        return {};
-    };
-
     return (
-        <div className="auth-container">
-            {/* Left Panel */}
-            <div className="left-panel">
-                <div className="left-content">
+        <div className="auth-container login-auth-container">
+            <div className="left-panel login-left-panel">
+                <div className="login-map-wrapper">
+                    <span className="login-map-ring login-map-ring--outer" aria-hidden="true" />
+                    <span className="login-map-ring login-map-ring--inner" aria-hidden="true" />
+                    <img src="/transparent.PNG" alt="" className="login-left-bg-image" aria-hidden="true" />
+                </div>
+                <div className="left-content login-left-content">
                     <div className="logo-mark">
                         <i className="fas fa-tower-broadcast"></i>
                     </div>
@@ -84,52 +59,61 @@ const SignUp = () => {
                 </div>
             </div>
 
-            {/* Right Panel */}
-            <div className="right-panel">
-                <div className="auth-card">
+            <div className="right-panel login-right-panel">
+                <div className="auth-card login-auth-card">
                     <h1 className="auth-title">Create your account</h1>
-                    
+
                     <form onSubmit={handleSubmit}>
-                        <div className="form-group" style={{ transition: 'transform 0.2s', ...(email ? { transform: 'translateY(-1px)'} : {} ) }}>
-                            <label className="form-label" htmlFor="email">Email</label>
-                            <input 
-                                type="email" 
-                                id="email" 
-                                className="form-input" 
-                                placeholder="you@example.com" 
-                                required 
+                        {errors.form && (
+                            <div className="auth-error">
+                                Failed to create account. Please try a different email.
+                            </div>
+                        )}
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="signup-email">Email</label>
+                            <input
+                                type="email"
+                                id="signup-email"
+                                className="form-input"
+                                placeholder="you@example.com"
                                 value={email}
-                                onChange={handleEmailChange}
-                                style={getEmailStyles()}
+                                onChange={(e) => {
+                                    setEmail(e.target.value);
+                                    setErrors((prev) => ({ ...prev, email: false, form: false }));
+                                }}
+                                style={errors.email ? { borderColor: '#ef4444' } : {}}
                             />
                         </div>
 
-                        <div className="form-group last" style={{ transition: 'transform 0.2s', ...(password ? { transform: 'translateY(-1px)'} : {} ) }}>
-                            <label className="form-label" htmlFor="password">Password</label>
-                            <input 
-                                type="password" 
-                                id="password" 
-                                className="form-input" 
-                                placeholder="••••••••" 
-                                required 
+                        <div className="form-group last">
+                            <label className="form-label" htmlFor="signup-password">Password</label>
+                            <input
+                                type="password"
+                                id="signup-password"
+                                className="form-input"
+                                placeholder="At least 8 characters"
                                 value={password}
-                                onChange={handlePasswordChange}
-                                style={getPasswordStyles()}
+                                onChange={(e) => {
+                                    setPassword(e.target.value);
+                                    setErrors((prev) => ({ ...prev, password: false, form: false }));
+                                }}
+                                style={errors.password ? { borderColor: '#ef4444' } : {}}
                             />
                         </div>
 
-                        <button 
-                            type="submit" 
-                            className="btn-continue" 
+                        <button
+                            type="submit"
+                            className="btn-continue"
                             disabled={isLoading}
-                            style={isLoading ? { opacity: 0.7 } : {}}
                         >
                             {isLoading ? 'Creating account...' : 'Continue'}
                         </button>
                     </form>
 
                     <div className="auth-footer">
-                        Already have an account? <Link to="/login" className="auth-link">Log in</Link>
+                        <div className="auth-signup-row">
+                            Already have an account? <Link to="/login" className="auth-link">Log in</Link>
+                        </div>
                     </div>
                 </div>
             </div>
