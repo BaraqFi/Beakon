@@ -20,8 +20,6 @@ const Analytics = () => {
     const [stats, setStats] = useState(null);
     const [chartData, setChartData] = useState([]);
     const [locations, setLocations] = useState([]);
-    const [devices, setDevices] = useState([]);
-    const [browsers, setBrowsers] = useState([]);
     const [clicksLog, setClicksLog] = useState([]);
     const [error, setError] = useState('');
 
@@ -56,10 +54,9 @@ const Analytics = () => {
                 value: entry.count
             })));
 
-            // Per-link breakdowns are not in the overview — keep empty gracefully
+
+            // Per-link breakdowns are not in the overview
             setLocations([]);
-            setDevices([]);
-            setBrowsers([]);
 
             // Load click log from the first active link if available
             if (data.recentLinks && data.recentLinks.length > 0) {

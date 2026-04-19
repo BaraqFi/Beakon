@@ -12,7 +12,6 @@ const LinkAnalytics = () => {
   const { shortCode } = useParams();
   const [isLoading, setIsLoading] = useState(true);
   const [link, setLink] = useState(null);
-  const [stats, setStats] = useState(null);
   const [chartData, setChartData] = useState([]);
   const [locations, setLocations] = useState([]);
   const [devices, setDevices] = useState([]);
@@ -53,9 +52,6 @@ const LinkAnalytics = () => {
               ? Number(((s.uniqueVisitors / s.totalClicks) * 100).toFixed(1))
               : 0
           });
-
-          setStats(s);
-
           setChartData((s.clicksByDate || []).map((entry) => ({
             date: entry._id,
             value: entry.count
