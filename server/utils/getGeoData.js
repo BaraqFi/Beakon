@@ -12,8 +12,8 @@ const getGeoData = async (ip) => {
     }
 
     try {
-        // Querying ip-api. Fields 16400 limits response to `status,message,country,city`
-        const response = await fetch(`http://ip-api.com/json/${ip}?fields=16400`);
+        // Querying ip-api with explicit field names: status, country, city
+        const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,city`);
         
         if (!response.ok) {
             return { country: 'Unknown', city: 'Unknown' };

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import api from '../services/api';
 import MetricCard from '../components/dashboard/MetricCard';
 import Skeleton from '../components/ui/Skeleton';
@@ -17,7 +17,6 @@ const Analytics = () => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // Will be populated by API
     const [stats, setStats] = useState(null);
     const [chartData, setChartData] = useState([]);
     const [locations, setLocations] = useState([]);
@@ -26,69 +25,72 @@ const Analytics = () => {
     const [clicksLog, setClicksLog] = useState([]);
     const [error, setError] = useState('');
 
-    const fetchAnalytics = async () => {
-            setIsLoading(true);
-            setError('');
-            try {
-                const linksRes = await api.get('/api/links');
-                const links = Array.isArray(linksRes.data) ? linksRes.data : [];
-                if (links.length === 0) return;
+    const periodDays = { '7D': 7, '30D': 30, '90D': 90, '1Y': 365 };
 
-                const linkId = links[0]._id || links[0].id;
-                const { data } = await api.get(`/api/analytics/${linkId}`);
-                const analytics = data.stats;
+    const fetchAnalytics = useCallback(async () => {
+        setIsLoading(true);
+        setError('');
+        try {
+            // Aggregate overview across all user links
+            const { data } = await api.get('/api/analytics/overview');
 
-                setStats({
-                    totalClicks: analytics.totalClicks || 0,
-                    uniqueVisitors: analytics.uniqueVisitors || 0
-                });
+            setStats({
+                totalClicks: data.totalClicks || 0,
+                uniqueVisitors: data.uniqueVisitors || 0,
+                activeLinks: data.stats?.activeLinks || 0,
+                topPerformer: data.stats?.topPerformer || '—',
+                topPerformerClicks: data.stats?.topPerformerClicks
+            });
 
-                setChartData((analytics.clicksByDate || []).map((entry) => ({
-                    date: entry._id,
-                    value: entry.count
-                })));
+            // Filter clicksByDate to the selected time period
+            const days = periodDays[timePeriod] || 30;
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - days);
 
-                setLocations((analytics.byCountry || []).map((entry) => ({
-                    country: entry._id || 'Unknown',
-                    count: entry.count,
-                    flag: '🌍'
-                })));
+            const filtered = (data.clicksByDate || []).filter((entry) => {
+                return new Date(entry._id) >= cutoff;
+            });
 
-                const dColors = ['#8B5CF6', '#F43F5E', '#10B981', '#F59E0B'];
-                setDevices((analytics.byDevice || []).map((entry, idx) => ({
-                    label: entry._id || 'Unknown',
-                    value: entry.count,
-                    color: dColors[idx % 4]
-                })));
+            setChartData(filtered.map((entry) => ({
+                date: entry._id,
+                value: entry.count
+            })));
 
-                setBrowsers((analytics.byBrowser || []).map((entry, idx) => ({
-                    label: entry._id || 'Unknown',
-                    value: entry.count,
-                    color: dColors[idx % 4]
-                })));
+            // Per-link breakdowns are not in the overview — keep empty gracefully
+            setLocations([]);
+            setDevices([]);
+            setBrowsers([]);
 
-                const clicksRes = await api.get(`/api/analytics/${linkId}/clicks?limit=5`);
-                setClicksLog((clicksRes.data?.clicks || []).map((c) => ({
-                    id: c._id,
-                    time: new Date(c.clickedAt).toLocaleString(),
-                    country: c.country,
-                    city: c.city,
-                    device: c.device,
-                    browser: c.browser,
-                    os: c.os,
-                    referrer: c.referrer || 'Direct'
-                })));
-            } catch (error) {
-                console.error("Analytics extraction failed:", error);
-                setError(error?.response?.data?.error || 'Failed to load analytics');
-            } finally {
-                setIsLoading(false);
+            // Load click log from the first active link if available
+            if (data.recentLinks && data.recentLinks.length > 0) {
+                const firstLinkId = data.recentLinks[0].id || data.recentLinks[0]._id;
+                try {
+                    const clicksRes = await api.get(`/api/analytics/${firstLinkId}/clicks?limit=5`);
+                    setClicksLog((clicksRes.data?.clicks || []).map((c) => ({
+                        id: c._id,
+                        time: new Date(c.clickedAt).toLocaleString(),
+                        country: c.country || '—',
+                        city: c.city || '—',
+                        device: c.device || '—',
+                        browser: c.browser || '—',
+                        os: c.os || '—',
+                        referrer: c.referrer || 'Direct'
+                    })));
+                } catch {
+                    setClicksLog([]);
+                }
             }
-        };
+        } catch (err) {
+            console.error('Analytics fetch failed:', err);
+            setError(err?.response?.data?.error || 'Failed to load analytics');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [timePeriod]);
 
     useEffect(() => {
         fetchAnalytics();
-    }, []);
+    }, [fetchAnalytics]);
 
     // D3 chart rendering — only runs when real data arrives
     useEffect(() => {
@@ -130,34 +132,7 @@ const Analytics = () => {
 
         const line = d3.line().x(d => x(d.date)).y(d => y(d.value)).curve(d3.curveMonotoneX);
         svg.append('path').datum(chartData).attr('fill', 'none').attr('stroke', '#8B5CF6').attr('stroke-width', 2).attr('d', line);
-    }, [isLoading, chartData]);
-
-    // Donut renderer — only runs when data exists
-    useEffect(() => {
-        if (isLoading || devices.length === 0) return;
-
-        function createDonutChart(elementId, data, total) {
-            const width = 160, height = 160;
-            const radius = Math.min(width, height) / 2;
-            const innerRadius = radius * 0.6;
-            const targetSvg = d3.select(elementId);
-            targetSvg.selectAll('*').remove();
-            const svg = targetSvg.attr('viewBox', `0 0 ${width} ${height}`);
-            const g = svg.append('g').attr('transform', `translate(${width / 2},${height / 2})`);
-            const color = d3.scaleOrdinal().range(data.map(d => d.color));
-            const pie = d3.pie().value(d => d.value).sort(null);
-            const arc = d3.arc().innerRadius(innerRadius).outerRadius(radius);
-            g.selectAll('arc').data(pie(data)).enter().append('g').append('path')
-                .attr('d', arc).attr('fill', d => color(d.data.label));
-            g.append('text').attr('text-anchor', 'middle').attr('dy', '-0.2em')
-                .attr('font-size', '20px').attr('font-weight', '700').attr('fill', '#F8FAFC').text(total || '0');
-            g.append('text').attr('text-anchor', 'middle').attr('dy', '1.2em')
-                .attr('font-size', '12px').attr('fill', '#6B7280').text('total');
-        }
-
-        createDonutChart('#devicesChart', devices, stats?.totalClicks?.toLocaleString());
-        createDonutChart('#browsersChart', browsers, stats?.totalClicks?.toLocaleString());
-    }, [isLoading, devices, browsers, stats, windowWidth]);
+    }, [isLoading, chartData, windowWidth]);
 
     const topLocation = locations[0];
     const maxLocationCount = topLocation?.count || 1;
@@ -173,34 +148,30 @@ const Analytics = () => {
                 </div>
                 <div className="date-range-selector">
                     <i className="fas fa-calendar"></i>
-                    <span>Last 30 days</span>
+                    <span>Last {timePeriod === '1Y' ? '1 Year' : timePeriod === '90D' ? '90 Days' : timePeriod === '7D' ? '7 Days' : '30 Days'}</span>
                     <i className="fas fa-chevron-down" style={{ fontSize: '10px' }}></i>
                 </div>
             </header>
 
             {/* Stat Cards */}
             <div className="metrics-grid">
-                <MetricCard 
+                <MetricCard
                     iconClass="fas fa-mouse-pointer"
                     label="Total Clicks"
                     value={stats?.totalClicks?.toLocaleString() || '0'}
-                    delta={stats?.clicksDelta}
-                    deltaPositive={stats?.clicksDeltaPositive}
-                    secondaryText={stats?.clicksSecondary}
                     isLoading={isLoading}
                 />
-                <MetricCard 
+                <MetricCard
                     iconClass="fas fa-users"
                     label="Unique Visitors"
                     value={stats?.uniqueVisitors?.toLocaleString() || '0'}
-                    secondaryText={stats?.visitorsSecondary}
                     isLoading={isLoading}
                 />
-                <MetricCard 
-                    iconClass="fas fa-clock"
-                    label="Last Clicked"
-                    value={stats?.lastClicked || '—'}
-                    secondaryText={stats?.lastClickedTime}
+                <MetricCard
+                    iconClass="fas fa-star"
+                    label="Top Performer"
+                    value={stats?.topPerformer || '—'}
+                    secondaryText={stats?.topPerformerClicks}
                     isLoading={isLoading}
                 />
             </div>
@@ -245,7 +216,7 @@ const Analytics = () => {
                     <h3 className="breakdown-title">Top Locations</h3>
                     {locations.length === 0 ? (
                         <div style={{ padding: '24px 0', color: '#6B7280', fontSize: '13px', textAlign: 'center' }}>
-                            No location data yet
+                            Location breakdown available on individual link analytics.
                         </div>
                     ) : (
                         locations.slice(0, 5).map((loc) => (
@@ -266,51 +237,17 @@ const Analytics = () => {
                 {/* Devices */}
                 <div className="breakdown-card">
                     <h3 className="breakdown-title">Devices</h3>
-                    {devices.length === 0 ? (
-                        <div style={{ padding: '24px 0', color: '#6B7280', fontSize: '13px', textAlign: 'center' }}>
-                            No device data yet
-                        </div>
-                    ) : (
-                        <div className="donut-container">
-                            <svg className="donut-chart" id="devicesChart"></svg>
-                            <div className="donut-legend">
-                                {devices.map(d => (
-                                    <div className="legend-row" key={d.label}>
-                                        <div className="legend-left">
-                                            <div className="legend-dot" style={{ background: d.color }}></div>
-                                            <span className="legend-label">{d.label}</span>
-                                        </div>
-                                        <span className="legend-percent">{d.value}%</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                    <div style={{ padding: '24px 0', color: '#6B7280', fontSize: '13px', textAlign: 'center' }}>
+                        Device breakdown available on individual link analytics.
+                    </div>
                 </div>
 
                 {/* Browsers */}
                 <div className="breakdown-card">
                     <h3 className="breakdown-title">Browsers</h3>
-                    {browsers.length === 0 ? (
-                        <div style={{ padding: '24px 0', color: '#6B7280', fontSize: '13px', textAlign: 'center' }}>
-                            No browser data yet
-                        </div>
-                    ) : (
-                        <div className="donut-container">
-                            <svg className="donut-chart" id="browsersChart"></svg>
-                            <div className="donut-legend">
-                                {browsers.map(b => (
-                                    <div className="legend-row" key={b.label}>
-                                        <div className="legend-left">
-                                            <div className="legend-dot" style={{ background: b.color }}></div>
-                                            <span className="legend-label">{b.label}</span>
-                                        </div>
-                                        <span className="legend-percent">{b.value}%</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+                    <div style={{ padding: '24px 0', color: '#6B7280', fontSize: '13px', textAlign: 'center' }}>
+                        Browser breakdown available on individual link analytics.
+                    </div>
                 </div>
             </div>
 

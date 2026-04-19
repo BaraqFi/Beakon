@@ -16,6 +16,7 @@ React frontend for Beakon. It includes the public landing page, authentication s
 2. Create `.env` (optional but recommended):
    - `REACT_APP_API_URL=http://localhost:5000`
    - `REACT_APP_PUBLIC_BASE_URL=http://localhost:5000` (optional override for displayed short links)
+   - Production (Vercel, `beakn.lol`): `REACT_APP_API_URL=https://api.beakn.lol`
 3. Start dev server:
    - `npm start`
 

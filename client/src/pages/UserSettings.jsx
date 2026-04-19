@@ -125,7 +125,7 @@ const UserSettings = () => {
                     <div className="input-group">
                         <label className="input-label">Your short domain</label>
                         <div className="input-wrapper">
-                            <input type="text" className="input-field monospace" defaultValue="bkn.so" disabled />
+                            <input type="text" className="input-field monospace" defaultValue="api.beakn.lol" disabled />
                             <i className="fas fa-lock input-icon"></i>
                         </div>
                         <div className="domain-info">

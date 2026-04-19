@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { buildShortUrl } from '../../utils/shortUrl';
 
 const CreateLinkModal = ({ isOpen, onClose, onCreate }) => {
     const [originalUrl, setOriginalUrl] = useState('');
@@ -49,6 +50,8 @@ const CreateLinkModal = ({ isOpen, onClose, onCreate }) => {
         }
     };
 
+    const previewUrl = buildShortUrl(customCode || 'auto-generated');
+
     return (
         <div className="modal-overlay active" onClick={handleClose}>
             <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -75,7 +78,7 @@ const CreateLinkModal = ({ isOpen, onClose, onCreate }) => {
                         <div className="form-field">
                             <label className="form-label">Short code</label>
                             <div className="shortcode-input-wrapper">
-                                <div className="shortcode-prefix">bkn.so/</div>
+                                <div className="shortcode-prefix">api.beakn.lol/</div>
                                 <input
                                     type="text"
                                     className="shortcode-input"
@@ -119,25 +122,27 @@ const CreateLinkModal = ({ isOpen, onClose, onCreate }) => {
                     </div>
 
                     <div className="modal-preview-column">
-                        <div className="preview-panel">
-                            <div className="preview-section">
+                        <div className="preview-panel" style={{ padding: '20px', gap: '12px' }}>
+                            <div className="preview-section" style={{ padding: 0 }}>
                                 <div className="preview-label">Link Preview</div>
-                                <div className="preview-url">bkn.so/{customCode || 'auto-generated'}</div>
-                                <div className="preview-destination">{originalUrl || 'https://…'}</div>
+                                <div className="preview-url" style={{ fontSize: '12px', wordBreak: 'break-all' }}>{previewUrl}</div>
+                                <div className="preview-destination" style={{ fontSize: '11px' }}>{originalUrl || 'https://…'}</div>
                             </div>
 
-                            <div className="preview-section">
-                                <div className="qr-placeholder">
+                            <div className="preview-section" style={{ padding: 0 }}>
+                                <div className="qr-placeholder" style={{ width: '64px', height: '64px', fontSize: '24px' }}>
                                     <i className="fas fa-qrcode"></i>
                                 </div>
                             </div>
 
-                            <div className="preview-section">
+                            <div className="preview-section" style={{ padding: 0 }}>
                                 <div className="preview-label">Tags</div>
                                 <div className="preview-tags">
-                                    {parsedTags.length === 0 ? <span className="tag">No tags</span> : parsedTags.map((tag) => (
-                                        <span key={tag} className="tag">{tag}</span>
-                                    ))}
+                                    {parsedTags.length === 0
+                                        ? <span className="tag">No tags</span>
+                                        : parsedTags.map((tag) => (
+                                            <span key={tag} className="tag">{tag}</span>
+                                        ))}
                                 </div>
                             </div>
                         </div>

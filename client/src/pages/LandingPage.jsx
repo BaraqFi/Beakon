@@ -55,8 +55,8 @@ const LandingPage = () => {
                 <img src="/hero.PNG" alt="" className="hero-bg-image" aria-hidden="true" />
 
                 <section className="hero-section">
-                    <h1 className="hero-headline">Know exactly who clicked your link.</h1>
-                    <p className="hero-subtitle">Paste any URL. Get a short trackable link. See every click, device, and location in real time.</p>
+                    <h1 className="hero-headline">Know if your link is actually being clicked.</h1>
+                    <p className="hero-subtitle">Share a link, then see if they actually opened it — perfect for pitches, demos, and follow-ups where you need to know who engaged.</p>
                     
                     <div className="input-container">
                         <div 

@@ -38,6 +38,8 @@ From `.env.example`:
 - `SERVER_URL` — public base URL for generated short links
 - `NODE_ENV` — runtime environment
 
+Production example: `CLIENT_URL=https://beakn.lol`, `SERVER_URL=https://api.beakn.lol`.
+
 ## Main Routes
 
 - `GET /api/health` — health check

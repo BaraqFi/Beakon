@@ -64,15 +64,20 @@ Workflows are in `.github/workflows/`:
 
 Set these in GitHub repository secrets:
 
-- `EC2_HOST`
-- `EC2_USER`
+- `EC2_HOST` (e.g. `17.32.298.16` or `ec2-17-32-298-16.eu-north-1.compute.amazonaws.com`)
+- `EC2_USER` (e.g. `ec2-user`)
 - `EC2_SSH_KEY`
-- `EC2_APP_DIR`
-- `PM2_PROCESS_NAME`
-- `HEALTHCHECK_URL` (optional but recommended)
+- `EC2_APP_DIR` (e.g. `/home/ec2-user/beakon`)
+- `PM2_PROCESS_NAME` (e.g. `beakon-server`)
+- `HEALTHCHECK_URL` — e.g. `https://api.beakn.lol/api/health`
+
+### Production URLs
+
+- **Frontend:** `https://beakn.lol`
+- **API:** `https://api.beakn.lol`
+- **Health:** `https://api.beakn.lol/api/health`
 
 ## Available Docs
 
 - `client/README.md` — frontend details
 - `server/README.md` — backend/API details
-- `DEPLOYMENT.md` — EC2 + Vercel deployment steps
