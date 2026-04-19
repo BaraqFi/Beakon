@@ -20,8 +20,8 @@ Thumbs.db
 
 # Misc
 *.log
-aiRules.md
-architecture.md
 beakon-server-keypair.pem
 DEPLOYMENT_PROGRESS_LOG.md
 deploymentSteps.md
+ARCHITECTURE.md
+aiRules.md
