@@ -17,7 +17,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Link to="/" className="logo" style={{ textDecoration: 'none', marginBottom: 0 }}>
                     <div className="logo-icon">
-                        <i className="fas fa-tower-broadcast"></i>
+                        <img src="/transparentLogo.png" alt="Beakon Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                     </div>
                     <div className="logo-text">Beakon</div>
                 </Link>

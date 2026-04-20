@@ -16,7 +16,7 @@ const DashboardLayout = () => {
             {/* Mobile Header (only visible on small screens) */}
             <div className="mobile-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#F8FAFC', fontWeight: 600 }}>
-                    <i className="fas fa-tower-broadcast" style={{ color: '#8B5CF6' }}></i>
+                    <img src="/transparentLogo.png" alt="Beakon Logo" style={{ width: '20px', height: '20px', objectFit: 'contain' }} />
                     Beakon
                 </div>
                 <button className="mobile-header-btn" onClick={() => setIsSidebarOpen(true)}>
