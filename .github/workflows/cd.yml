@@ -12,6 +12,7 @@ jobs:
     name: Deploy to EC2
     runs-on: ubuntu-latest
     if: github.event.workflow_run.conclusion == 'success'
+    environment: production # Change this if your GitHub environment is named differently
     env:
       APP_DIR: ${{ secrets.EC2_APP_DIR }}
       PM2_PROCESS_NAME: ${{ secrets.PM2_PROCESS_NAME }}
@@ -22,10 +23,14 @@ jobs:
 
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          APP_DIR: ${{ secrets.EC2_APP_DIR }}
+          PM2_PROCESS_NAME: ${{ secrets.PM2_PROCESS_NAME }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: APP_DIR,PM2_PROCESS_NAME
           script_stop: true
           script: |
             if [ -z "$APP_DIR" ]; then
