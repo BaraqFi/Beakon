@@ -57,10 +57,6 @@ jobs:
               fi
             fi
             pnpm install --frozen-lockfile
-            cd ../client
-            pnpm install --frozen-lockfile
-            pnpm run build
-            cd ../server
 
             pm2 restart "$PM2_PROCESS_NAME"
             pm2 save
