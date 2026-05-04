@@ -4,9 +4,11 @@ import TopNav from '../components/layout/TopNav';
 import Footer from '../components/layout/Footer';
 import api from '../services/api';
 import useClipboard from '../hooks/useClipboard';
+import useAuth from '../hooks/useAuth';
 import { buildShortUrl } from '../utils/shortUrl';
 
 const LandingPage = () => {
+    const { isLoggedIn } = useAuth();
     const [urlInput, setUrlInput] = useState('');
     const [shake, setShake] = useState(false);
     const [createdGuestLink, setCreatedGuestLink] = useState(null);
@@ -90,8 +92,8 @@ const LandingPage = () => {
                                     </button>
                                 </div>
                                 <div className="guest-link-result-actions">
-                                    <button className="btn-ghost guest-link-action-btn" onClick={() => navigate('/signup')}>
-                                        Sign up to view analytics
+                                    <button className="btn-ghost guest-link-action-btn" onClick={() => navigate(isLoggedIn ? '/dashboard' : '/signup')}>
+                                        {isLoggedIn ? 'Go to Dashboard' : 'Sign up to view analytics'}
                                     </button>
                                 </div>
                             </div>
@@ -191,8 +193,8 @@ const LandingPage = () => {
                 <div className="cta-content">
                     <h2 className="cta-title">Start tracking your links today</h2>
                     <p className="cta-description">Join thousands of marketers, creators, and businesses using Beakon to understand their audience.</p>
-                    <button className="btn-cta-large" onClick={() => navigate('/signup')}>
-                        <span>Get Started Free</span>
+                    <button className="btn-cta-large" onClick={() => navigate(isLoggedIn ? '/dashboard' : '/signup')}>
+                        <span>{isLoggedIn ? 'Go to Dashboard' : 'Get Started Free'}</span>
                         <i className="fas fa-arrow-right"></i>
                     </button>
                 </div>

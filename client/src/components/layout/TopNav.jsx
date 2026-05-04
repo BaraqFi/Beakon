@@ -1,7 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import useAuth from '../../hooks/useAuth';
 
 const TopNav = () => {
+    const { isLoggedIn } = useAuth();
     return (
         <nav className="top-nav">
             <Link to="/" className="top-nav-logo">
@@ -11,8 +13,14 @@ const TopNav = () => {
                 <div className="logo-text">Beakon</div>
             </Link>
             <div className="nav-actions">
-                <Link to="/login" className="btn-ghost nav-auth-btn">Log in</Link>
-                <Link to="/signup" className="btn-primary nav-auth-btn">Get Started</Link>
+                {isLoggedIn ? (
+                    <Link to="/dashboard" className="btn-primary nav-auth-btn">Dashboard</Link>
+                ) : (
+                    <>
+                        <Link to="/login" className="btn-ghost nav-auth-btn">Log in</Link>
+                        <Link to="/signup" className="btn-primary nav-auth-btn">Get Started</Link>
+                    </>
+                )}
             </div>
         </nav>
     );

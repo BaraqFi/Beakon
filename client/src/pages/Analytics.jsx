@@ -18,6 +18,7 @@ const Analytics = () => {
     }, []);
 
     const [stats, setStats] = useState(null);
+    const [linksMeta, setLinksMeta] = useState([]);
     const [chartData, setChartData] = useState([]);
     const [locations, setLocations] = useState([]);
     const [devices, setDevices] = useState([]);
@@ -31,8 +32,9 @@ const Analytics = () => {
         setIsLoading(true);
         setError('');
         try {
-            // Aggregate overview across all user links
-            const { data } = await api.get('/api/analytics/overview');
+            // Fetch overview across all user links for the selected time period
+            const days = periodDays[timePeriod] || 30;
+            const { data } = await api.get(`/api/analytics/overview?days=${days}`);
 
             setStats({
                 totalClicks: data.totalClicks || 0,
@@ -42,21 +44,31 @@ const Analytics = () => {
                 topPerformerClicks: data.stats?.topPerformerClicks
             });
 
-            // Filter clicksByDate to the selected time period
-            const days = periodDays[timePeriod] || 30;
-            const cutoff = new Date();
-            cutoff.setDate(cutoff.getDate() - days);
+            const currentLinksMeta = data.linksMeta || [];
+            setLinksMeta(currentLinksMeta);
 
-            const filtered = (data.clicksByDate || []).filter((entry) => {
-                return new Date(entry._id) >= cutoff;
+            // Bar Chart Data (Stacked)
+            const linkIds = currentLinksMeta.map(l => l.id);
+            const dateMap = {};
+            for (let i = days - 1; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dateStr = d.toISOString().split('T')[0];
+                const defaultObj = { date: dateStr, total: 0 };
+                linkIds.forEach(id => defaultObj[id] = 0);
+                dateMap[dateStr] = defaultObj;
+            }
+
+            (data.clicksByDate || []).forEach(entry => {
+                const dateStr = entry._id?.date;
+                const linkId = entry._id?.linkId;
+                if (dateMap[dateStr] && linkId) {
+                    dateMap[dateStr][linkId] = entry.count;
+                    dateMap[dateStr].total += entry.count;
+                }
             });
 
-            setChartData(filtered.map((entry) => ({
-                date: entry._id,
-                value: entry.count
-            })));
-
-            const dColors = ['#8B5CF6', '#F43F5E', '#10B981', '#F59E0B'];
+            setChartData(Object.values(dateMap));
 
             setLocations((data.byCountry || []).map((entry) => ({
                 country: entry._id || 'Unknown',
@@ -64,17 +76,20 @@ const Analytics = () => {
                 flag: '🌍'
             })));
 
-            setDevices((data.byDevice || []).map((entry, idx) => ({
-                label: entry._id || 'Unknown',
-                value: entry.count,
-                color: dColors[idx % 4]
-            })));
+            const processDonut = (rawData, typeField) => {
+                const groups = {};
+                rawData.forEach(d => {
+                    const key = d._id?.[typeField] || 'Unknown';
+                    const linkId = d._id?.linkId;
+                    if (!groups[key]) groups[key] = { label: key, value: 0, items: [] };
+                    groups[key].value += d.count;
+                    if (linkId) groups[key].items.push({ linkId, value: d.count });
+                });
+                return Object.values(groups).sort((a, b) => b.value - a.value);
+            };
 
-            setBrowsers((data.byBrowser || []).map((entry, idx) => ({
-                label: entry._id || 'Unknown',
-                value: entry.count,
-                color: dColors[idx % 4]
-            })));
+            setDevices(processDonut(data.byDevice || [], 'device'));
+            setBrowsers(processDonut(data.byBrowser || [], 'browser'));
             // Load click log from the first active link if available
             if (data.recentLinks && data.recentLinks.length > 0) {
                 const firstLinkId = data.recentLinks[0].id || data.recentLinks[0]._id;
@@ -116,18 +131,25 @@ const Analytics = () => {
         const margin = { top: 20, right: 40, bottom: 40, left: 60 };
         d3.select('#mainChart').selectAll('*').remove();
         const containerWidth = chartContainer.parentElement.offsetWidth - 48;
-        const width = containerWidth - margin.left - margin.right;
+        const minChartWidth = chartData.length * 30;
+        const width = Math.max(containerWidth - margin.left - margin.right, minChartWidth);
         const height = 400 - margin.top - margin.bottom;
 
         const svg = d3.select('#mainChart')
-            .attr('width', containerWidth)
+            .attr('width', width + margin.left + margin.right)
             .attr('height', 400)
             .append('g')
             .attr('transform', `translate(${margin.left},${margin.top})`);
 
+        const linkIds = linksMeta.map(l => l.id);
+        const colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(linkIds);
+
         const x = d3.scaleBand().domain(chartData.map(d => d.date)).range([0, width]).padding(0.2);
-        const maxVal = d3.max(chartData, d => d.value) || 100;
-        const y = d3.scaleLinear().domain([0, maxVal * 1.1]).range([height, 0]);
+        const maxVal = d3.max(chartData, d => d.total) || 10;
+        const y = d3.scaleLinear().domain([0, maxVal * 1.1]).nice().range([height, 0]);
+
+        const stack = d3.stack().keys(linkIds);
+        const stackedData = stack(chartData);
 
         svg.append('g').attr('class', 'grid').selectAll('line').data(y.ticks(5)).enter().append('line')
             .attr('x1', 0).attr('x2', width).attr('y1', d => y(d)).attr('y2', d => y(d))
@@ -141,55 +163,78 @@ const Analytics = () => {
             .call(g => g.select('.domain').remove()).call(g => g.selectAll('.tick line').remove())
             .call(g => g.selectAll('text').attr('fill', '#6B7280').attr('font-size', '12px').attr('x', -10));
 
-        svg.selectAll('.bar')
-            .data(chartData)
+        svg.selectAll('.layer')
+            .data(stackedData)
+            .enter().append('g')
+            .attr('class', 'layer')
+            .attr('fill', d => colorScale(d.key))
+            .selectAll('rect')
+            .data(d => d)
             .enter().append('rect')
-            .attr('class', 'bar')
-            .attr('x', d => x(d.date))
-            .attr('y', d => y(d.value))
+            .attr('x', d => x(d.data.date))
+            .attr('y', d => y(d[1]))
+            .attr('height', d => Math.max(0, y(d[0]) - y(d[1])))
             .attr('width', x.bandwidth())
-            .attr('height', d => height - y(d.value))
-            .attr('fill', '#8B5CF6')
-            .attr('rx', 4);
-    }, [isLoading, chartData, windowWidth]);
+            .attr('rx', 2);
+    }, [isLoading, chartData, windowWidth, linksMeta]);
 
     // Donut charts
     useEffect(() => {
-        if (isLoading) return;
+        if (isLoading || linksMeta.length === 0) return;
+        
+        const colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(linksMeta.map(l => l.id));
+        const deviceColorScale = d3.scaleOrdinal(['#475569', '#64748B', '#94A3B8', '#CBD5E1']);
 
-        const createDonut = (elementId, data, total) => {
+        const createMultiDonut = (elementId, data, total) => {
             const el = document.getElementById(elementId);
             if (!el || data.length === 0) return;
 
-            const width = 140, height = 140;
+            const width = 180, height = 180;
             const radius = Math.min(width, height) / 2;
-            const innerRadius = radius * 0.6;
             const targetSvg = d3.select(`#${elementId}`);
             targetSvg.selectAll('*').remove();
             const svg = targetSvg.attr('viewBox', `0 0 ${width} ${height}`);
             const g = svg.append('g').attr('transform', `translate(${width / 2},${height / 2})`);
-            const color = d3.scaleOrdinal().range(data.map(d => d.color));
-            const pie = d3.pie().value(d => d.value).sort(null);
-            const arc = d3.arc().innerRadius(innerRadius).outerRadius(radius);
 
-            g.selectAll('arc').data(pie(data)).enter().append('g')
-                .append('path').attr('d', arc)
-                .attr('fill', d => color(d.data.label));
+            // Inner Ring (Categories)
+            const innerRadius = radius * 0.45;
+            const innerOuterRadius = radius * 0.68;
+            const innerPie = d3.pie().value(d => d.value).sort(null);
+            const innerArc = d3.arc().innerRadius(innerRadius).outerRadius(innerOuterRadius);
+
+            g.selectAll('inner-arc').data(innerPie(data)).enter().append('path')
+                .attr('d', innerArc)
+                .attr('fill', (d, i) => deviceColorScale(i))
+                .attr('stroke', '#0D1117')
+                .attr('stroke-width', 1.5);
+
+            // Outer Ring (Links)
+            const outerData = data.flatMap(d => d.items.sort((a,b) => b.value - a.value));
+            const outerRadius = radius * 0.95;
+            const outerPie = d3.pie().value(d => d.value).sort(null);
+            const outerArc = d3.arc().innerRadius(innerOuterRadius).outerRadius(outerRadius);
+
+            g.selectAll('outer-arc').data(outerPie(outerData)).enter().append('path')
+                .attr('d', outerArc)
+                .attr('fill', d => colorScale(d.data.linkId))
+                .attr('stroke', '#0D1117')
+                .attr('stroke-width', 1.5)
+                .append("title")
+                .text(d => {
+                    const l = linksMeta.find(l => l.id === d.data.linkId);
+                    return `${l ? (l.title || l.shortCode) : 'Link'}: ${d.data.value} clicks`;
+                });
 
             g.append('text').attr('text-anchor', 'middle').attr('dy', '-0.2em')
-                .attr('font-size', '18px').attr('font-weight', '700')
+                .attr('font-size', '16px').attr('font-weight', '700')
                 .attr('fill', '#F8FAFC').text(total || '0');
             g.append('text').attr('text-anchor', 'middle').attr('dy', '1.2em')
                 .attr('font-size', '11px').attr('fill', '#6B7280').text('clicks');
         };
 
-        if (devices.length > 0) {
-            createDonut('devicesChart', devices, stats?.totalClicks?.toLocaleString());
-        }
-        if (browsers.length > 0) {
-            createDonut('browsersChart', browsers, stats?.totalClicks?.toLocaleString());
-        }
-    }, [isLoading, devices, browsers, stats]);
+        if (devices.length > 0) createMultiDonut('devicesChart', devices, stats?.totalClicks?.toLocaleString());
+        if (browsers.length > 0) createMultiDonut('browsersChart', browsers, stats?.totalClicks?.toLocaleString());
+    }, [isLoading, devices, browsers, stats, linksMeta]);
 
     const topLocation = locations[0];
     const maxLocationCount = topLocation?.count || 1;
@@ -248,16 +293,12 @@ const Analytics = () => {
                     <EmptyState
                         icon="fas fa-chart-area"
                         title="No analytics data yet"
-                        description="Click data will appear here once your links start receiving traffic."
+                        description="Create and share short links to see aggregate analytics."
                     />
                 ) : (
-                    <>
+                    <div style={{ overflowX: 'auto', overflowY: 'hidden', paddingBottom: '8px' }}>
                         <svg id="mainChart"></svg>
-                        <div className="chart-tooltip" id="chartTooltip">
-                            <div className="tooltip-date" id="tooltipDate"></div>
-                            <div className="tooltip-value" id="tooltipValue"></div>
-                        </div>
-                    </>
+                    </div>
                 )}
             </div>
 
@@ -294,19 +335,8 @@ const Analytics = () => {
                             No device data yet
                         </div>
                     ) : (
-                        <div className="donut-container">
+                        <div className="donut-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                             <svg className="donut-chart" id="devicesChart"></svg>
-                            <div className="donut-legend">
-                                {devices.map(d => (
-                                    <div className="legend-row" key={d.label}>
-                                        <div className="legend-left">
-                                            <div className="legend-dot" style={{ background: d.color }}></div>
-                                            <span className="legend-label">{d.label}</span>
-                                        </div>
-                                        <span className="legend-percent">{d.value}</span>
-                                    </div>
-                                ))}
-                            </div>
                         </div>
                     )}
                 </div>
@@ -319,23 +349,25 @@ const Analytics = () => {
                             No browser data yet
                         </div>
                     ) : (
-                        <div className="donut-container">
+                        <div className="donut-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                             <svg className="donut-chart" id="browsersChart"></svg>
-                            <div className="donut-legend">
-                                {browsers.map(b => (
-                                    <div className="legend-row" key={b.label}>
-                                        <div className="legend-left">
-                                            <div className="legend-dot" style={{ background: b.color }}></div>
-                                            <span className="legend-label">{b.label}</span>
-                                        </div>
-                                        <span className="legend-percent">{b.value}</span>
-                                    </div>
-                                ))}
-                            </div>
                         </div>
                     )}
                 </div>
             </div>
+
+            {/* Global Link Legend */}
+            {linksMeta.length > 0 && (
+                <div className="link-legend" style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '24px', padding: '16px', background: '#1E2330', borderRadius: '12px' }}>
+                    <div style={{ width: '100%', fontSize: '13px', fontWeight: '600', color: '#F8FAFC', marginBottom: '4px' }}>Link Color Legend</div>
+                    {linksMeta.map((link, idx) => (
+                        <div key={link.id} style={{ display: 'flex', alignItems: 'center', fontSize: '12px', color: '#94A3B8' }}>
+                            <div style={{ width: 12, height: 12, borderRadius: '50%', background: d3.schemeCategory10[idx % 10], marginRight: 8 }}></div>
+                            {link.title || link.shortCode}
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {/* Clicks Log Table */}
             <div className="table-card">

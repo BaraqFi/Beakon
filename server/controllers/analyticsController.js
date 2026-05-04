@@ -49,24 +49,28 @@ const getAccountOverview = async (req, res, next) => {
             }
         }
 
-        // Global sparkline trajectory (last 30 days)
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        // Global sparkline trajectory
+        const days = parseInt(req.query.days) || 30;
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - days);
 
-        const clicksByDate = await Click.aggregate([
+        const clicksByDateRaw = await Click.aggregate([
             { 
                 $match: { 
                     linkId: { $in: linkIds },
-                    clickedAt: { $gte: thirtyDaysAgo }
+                    clickedAt: { $gte: startDate }
                 } 
             },
             { 
                 $group: { 
-                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$clickedAt" } },
+                    _id: { 
+                        date: { $dateToString: { format: "%Y-%m-%d", date: "$clickedAt" } },
+                        linkId: "$linkId"
+                    },
                     count: { $sum: 1 }
                 } 
             },
-            { $sort: { _id: 1 } }
+            { $sort: { "_id.date": 1 } }
         ]);
 
         const activeLinks = await Link.countDocuments({ userId: req.user.userId, isActive: true });
@@ -77,8 +81,8 @@ const getAccountOverview = async (req, res, next) => {
         });
 
         const byCountry = await Click.aggregate([{ $match: { linkId: { $in: linkIds } } }, { $group: { _id: '$country', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 10 }]);
-        const byDevice = await Click.aggregate([{ $match: { linkId: { $in: linkIds } } }, { $group: { _id: '$device', count: { $sum: 1 } } }, { $sort: { count: -1 } }]);
-        const byBrowser = await Click.aggregate([{ $match: { linkId: { $in: linkIds } } }, { $group: { _id: '$browser', count: { $sum: 1 } } }, { $sort: { count: -1 } }]);
+        const byDeviceRaw = await Click.aggregate([{ $match: { linkId: { $in: linkIds } } }, { $group: { _id: { device: '$device', linkId: '$linkId' }, count: { $sum: 1 } } }, { $sort: { count: -1 } }]);
+        const byBrowserRaw = await Click.aggregate([{ $match: { linkId: { $in: linkIds } } }, { $group: { _id: { browser: '$browser', linkId: '$linkId' }, count: { $sum: 1 } } }, { $sort: { count: -1 } }]);
 
         const latestLinks = await Link.find({ userId: req.user.userId }).sort({ createdAt: -1 }).limit(5);
         const recentLinks = await Promise.all(latestLinks.map(async (link) => {
@@ -100,15 +104,23 @@ const getAccountOverview = async (req, res, next) => {
             };
         }));
 
+        const allLinks = await Link.find({ userId: req.user.userId }).select('_id shortCode title originalUrl');
+        const linksMeta = allLinks.map(l => ({
+            id: l._id,
+            shortCode: l.shortCode,
+            title: l.title || l.originalUrl
+        }));
+
         res.status(200).json({
             totalLinks: linkIds.length,
             totalClicks,
             uniqueVisitors,
             topPerforming,
-            clicksByDate,
+            clicksByDate: clicksByDateRaw,
             byCountry,
-            byDevice,
-            byBrowser,
+            byDevice: byDeviceRaw,
+            byBrowser: byBrowserRaw,
+            linksMeta,
             stats: {
                 totalClicks,
                 activeLinks,
@@ -152,11 +164,16 @@ const getLinkAnalytics = async (req, res, next) => {
             Click.distinct('ipHash', { linkId }).then(arr => arr.length),
             
             // Trajectory
-            Click.aggregate([
-                { $match: { linkId } },
-                { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$clickedAt" } }, count: { $sum: 1 } } },
-                { $sort: { _id: 1 } }
-            ]),
+            (async () => {
+                const days = parseInt(req.query.days) || 30;
+                const startDate = new Date();
+                startDate.setDate(startDate.getDate() - days);
+                return Click.aggregate([
+                    { $match: { linkId, clickedAt: { $gte: startDate } } },
+                    { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$clickedAt" } }, count: { $sum: 1 } } },
+                    { $sort: { _id: 1 } }
+                ]);
+            })(),
 
             // Geographics (limit top 10)
             Click.aggregate([

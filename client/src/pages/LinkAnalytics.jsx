@@ -12,6 +12,7 @@ const LinkAnalytics = () => {
   const { shortCode } = useParams();
   const [isLoading, setIsLoading] = useState(true);
   const [link, setLink] = useState(null);
+  const [timePeriod, setTimePeriod] = useState('30D');
   const [chartData, setChartData] = useState([]);
   const [locations, setLocations] = useState([]);
   const [devices, setDevices] = useState([]);
@@ -40,7 +41,8 @@ const LinkAnalytics = () => {
         }
 
         const linkId = selectedLink.id || selectedLink._id;
-        const { data: analyticsData } = await api.get(`/api/analytics/${linkId}`);
+        const daysToFetch = timePeriod === '7D' ? 7 : timePeriod === '30D' ? 30 : timePeriod === '90D' ? 90 : 365;
+        const { data: analyticsData } = await api.get(`/api/analytics/${linkId}?days=${daysToFetch}`);
         const s = analyticsData.stats || {};
 
         if (isMounted) {
@@ -52,10 +54,20 @@ const LinkAnalytics = () => {
               ? Number(((s.uniqueVisitors / s.totalClicks) * 100).toFixed(1))
               : 0
           });
-          setChartData((s.clicksByDate || []).map((entry) => ({
-            date: entry._id,
-            value: entry.count
-          })));
+
+          const rawDates = s.clicksByDate || [];
+          const dateMap = new Map(rawDates.map(d => [d._id, d.count]));
+          const fullData = [];
+          for (let i = daysToFetch - 1; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            const dateStr = d.toISOString().split('T')[0];
+            fullData.push({
+              date: dateStr,
+              value: dateMap.get(dateStr) || 0
+            });
+          }
+          setChartData(fullData);
 
           const dColors = ['#8B5CF6', '#F43F5E', '#10B981', '#F59E0B'];
 
@@ -90,7 +102,7 @@ const LinkAnalytics = () => {
     return () => {
       isMounted = false;
     };
-  }, [shortCode]);
+  }, [shortCode, timePeriod]);
 
   // Clicks Over Time chart
   useEffect(() => {
@@ -102,18 +114,19 @@ const LinkAnalytics = () => {
     const margin = { top: 20, right: 40, bottom: 40, left: 60 };
     d3.select('#linkMainChart').selectAll('*').remove();
     const containerWidth = (chartContainer.parentElement?.offsetWidth || 600) - 48;
-    const width = containerWidth - margin.left - margin.right;
+    const minChartWidth = chartData.length * 30; // 30px per day minimum
+    const width = Math.max(containerWidth - margin.left - margin.right, minChartWidth);
     const height = 300 - margin.top - margin.bottom;
 
     const svg = d3.select('#linkMainChart')
-      .attr('width', containerWidth)
+      .attr('width', width + margin.left + margin.right)
       .attr('height', 300)
       .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`);
 
     const x = d3.scaleBand().domain(chartData.map(d => d.date)).range([0, width]).padding(0.2);
     const maxVal = d3.max(chartData, d => d.value) || 10;
-    const y = d3.scaleLinear().domain([0, maxVal * 1.1]).range([height, 0]);
+    const y = d3.scaleLinear().domain([0, maxVal * 1.1]).nice().range([height, 0]);
 
     svg.append('g').attr('class', 'grid')
       .selectAll('line').data(y.ticks(5)).enter().append('line')
@@ -279,6 +292,13 @@ const LinkAnalytics = () => {
       <div className="chart-card">
         <div className="chart-header">
           <h2 className="chart-title">Clicks Over Time</h2>
+          <div className="time-toggles">
+              {['7D', '30D', '90D', '1Y'].map(p => (
+                  <button key={p} className={`pill-toggle ${timePeriod === p ? 'active' : ''}`} onClick={() => setTimePeriod(p)}>
+                      {p}
+                  </button>
+              ))}
+          </div>
         </div>
         {chartData.length === 0 ? (
           <EmptyState
@@ -287,7 +307,9 @@ const LinkAnalytics = () => {
             description="Share this link to start seeing click activity."
           />
         ) : (
-          <svg id="linkMainChart" ref={chartRef}></svg>
+          <div style={{ overflowX: 'auto', overflowY: 'hidden', paddingBottom: '8px' }}>
+            <svg id="linkMainChart" ref={chartRef}></svg>
+          </div>
         )}
       </div>
 

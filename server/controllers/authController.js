@@ -6,14 +6,14 @@ const jwt = require('jsonwebtoken');
 
 const setTokenCookie = (res, userId) => {
     const token = jwt.sign({ userId }, process.env.JWT_SECRET, {
-        expiresIn: process.env.JWT_EXPIRES_IN || '7d'
+        expiresIn: process.env.JWT_EXPIRES_IN || '24h'
     });
 
     res.cookie('jwt', token, {
         httpOnly: true,                  // Cannot be accessed via client JS
         secure: process.env.NODE_ENV === 'production', // true if prod
         sameSite: 'Lax',                 // Protects against CSRF
-        maxAge: 7 * 24 * 60 * 60 * 1000  // 7 days in ms
+        maxAge: 24 * 60 * 60 * 1000      // 24 hours in ms
     });
 };
 
