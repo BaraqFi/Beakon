@@ -11,29 +11,49 @@ const getGeoData = async (ip) => {
         return { country: 'Localhost', city: 'Dev Environment' };
     }
 
+    let country = 'Unknown';
+    let city = 'Unknown';
+
     try {
-        const response = await fetch(`https://ipapi.co/${ip}/json/`);
+        const response = await fetch(`http://ip-api.com/json/${ip}`);
         
-        if (!response.ok) {
-            return { country: 'Unknown', city: 'Unknown' };
+        if (response.ok) {
+            const data = await response.json();
+            if (data.status === 'success' && data.country) {
+                country = data.country || 'Unknown';
+                city = data.city || data.regionName || 'Unknown';
+            }
         }
-
-        const data = await response.json();
-        
-        if (!data.error) {
-            return {
-                country: data.country_name || 'Unknown',
-                city: data.city || data.region || 'Unknown'
-            };
-        }
-
-        return { country: 'Unknown', city: 'Unknown' };
-
     } catch (error) {
-        // If the third-party geo API is completely down, fail gracefully so tracking continues
-        console.error(`GeoData fetch failed for IP ${ip}: ${error.message}`);
-        return { country: 'Unknown', city: 'Unknown' };
+        console.error(`Primary GeoData (ip-api) fetch failed for IP ${ip}: ${error.message}`);
     }
+
+    // Fallback if the primary returned Unknown or failed
+    if (country === 'Unknown') {
+        try {
+            const key = process.env.IP2LOCATION_KEY;
+            const url = key ? `https://api.ip2location.io/?key=${key}&ip=${ip}` : `https://api.ip2location.io/?ip=${ip}`;
+            
+            const response = await fetch(url);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.country_name && data.country_name !== '-') {
+                    country = data.country_name;
+                    city = data.city_name || data.region_name || 'Unknown';
+                    
+                    // Add proxy label if detected
+                    if (data.is_proxy) {
+                        country += ' (Proxy)';
+                        if (city !== 'Unknown') city += ' (Proxy)';
+                    }
+                }
+            }
+        } catch (error) {
+            console.error(`Secondary GeoData (ip2location) fetch failed for IP ${ip}: ${error.message}`);
+        }
+    }
+
+    return { country, city };
 };
 
 module.exports = getGeoData;
