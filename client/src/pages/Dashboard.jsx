@@ -73,11 +73,6 @@ const Dashboard = () => {
                     <div className="page-subtitle">Welcome back. Here's what's happening.</div>
                 </div>
                 <div className="header-actions">
-                    <div className="date-range-selector">
-                        <i className="fas fa-calendar"></i>
-                        <span>Last 30 days</span>
-                        <i className="fas fa-chevron-down" style={{ fontSize: '10px' }}></i>
-                    </div>
                     <button className="btn-primary" onClick={() => setIsCreateModalOpen(true)}>
                         <i className="fas fa-plus"></i>
                         <span>Create Link</span>

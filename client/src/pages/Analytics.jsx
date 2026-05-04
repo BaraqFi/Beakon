@@ -20,6 +20,8 @@ const Analytics = () => {
     const [stats, setStats] = useState(null);
     const [chartData, setChartData] = useState([]);
     const [locations, setLocations] = useState([]);
+    const [devices, setDevices] = useState([]);
+    const [browsers, setBrowsers] = useState([]);
     const [clicksLog, setClicksLog] = useState([]);
     const [error, setError] = useState('');
 
@@ -54,10 +56,25 @@ const Analytics = () => {
                 value: entry.count
             })));
 
+            const dColors = ['#8B5CF6', '#F43F5E', '#10B981', '#F59E0B'];
 
-            // Per-link breakdowns are not in the overview
-            setLocations([]);
+            setLocations((data.byCountry || []).map((entry) => ({
+                country: entry._id || 'Unknown',
+                count: entry.count,
+                flag: '🌍'
+            })));
 
+            setDevices((data.byDevice || []).map((entry, idx) => ({
+                label: entry._id || 'Unknown',
+                value: entry.count,
+                color: dColors[idx % 4]
+            })));
+
+            setBrowsers((data.byBrowser || []).map((entry, idx) => ({
+                label: entry._id || 'Unknown',
+                value: entry.count,
+                color: dColors[idx % 4]
+            })));
             // Load click log from the first active link if available
             if (data.recentLinks && data.recentLinks.length > 0) {
                 const firstLinkId = data.recentLinks[0].id || data.recentLinks[0]._id;
@@ -108,7 +125,7 @@ const Analytics = () => {
             .append('g')
             .attr('transform', `translate(${margin.left},${margin.top})`);
 
-        const x = d3.scalePoint().domain(chartData.map(d => d.date)).range([0, width]);
+        const x = d3.scaleBand().domain(chartData.map(d => d.date)).range([0, width]).padding(0.2);
         const maxVal = d3.max(chartData, d => d.value) || 100;
         const y = d3.scaleLinear().domain([0, maxVal * 1.1]).range([height, 0]);
 
@@ -124,12 +141,55 @@ const Analytics = () => {
             .call(g => g.select('.domain').remove()).call(g => g.selectAll('.tick line').remove())
             .call(g => g.selectAll('text').attr('fill', '#6B7280').attr('font-size', '12px').attr('x', -10));
 
-        const area = d3.area().x(d => x(d.date)).y0(height).y1(d => y(d.value)).curve(d3.curveMonotoneX);
-        svg.append('path').datum(chartData).attr('fill', 'rgba(139, 92, 246, 0.08)').attr('d', area);
-
-        const line = d3.line().x(d => x(d.date)).y(d => y(d.value)).curve(d3.curveMonotoneX);
-        svg.append('path').datum(chartData).attr('fill', 'none').attr('stroke', '#8B5CF6').attr('stroke-width', 2).attr('d', line);
+        svg.selectAll('.bar')
+            .data(chartData)
+            .enter().append('rect')
+            .attr('class', 'bar')
+            .attr('x', d => x(d.date))
+            .attr('y', d => y(d.value))
+            .attr('width', x.bandwidth())
+            .attr('height', d => height - y(d.value))
+            .attr('fill', '#8B5CF6')
+            .attr('rx', 4);
     }, [isLoading, chartData, windowWidth]);
+
+    // Donut charts
+    useEffect(() => {
+        if (isLoading) return;
+
+        const createDonut = (elementId, data, total) => {
+            const el = document.getElementById(elementId);
+            if (!el || data.length === 0) return;
+
+            const width = 140, height = 140;
+            const radius = Math.min(width, height) / 2;
+            const innerRadius = radius * 0.6;
+            const targetSvg = d3.select(`#${elementId}`);
+            targetSvg.selectAll('*').remove();
+            const svg = targetSvg.attr('viewBox', `0 0 ${width} ${height}`);
+            const g = svg.append('g').attr('transform', `translate(${width / 2},${height / 2})`);
+            const color = d3.scaleOrdinal().range(data.map(d => d.color));
+            const pie = d3.pie().value(d => d.value).sort(null);
+            const arc = d3.arc().innerRadius(innerRadius).outerRadius(radius);
+
+            g.selectAll('arc').data(pie(data)).enter().append('g')
+                .append('path').attr('d', arc)
+                .attr('fill', d => color(d.data.label));
+
+            g.append('text').attr('text-anchor', 'middle').attr('dy', '-0.2em')
+                .attr('font-size', '18px').attr('font-weight', '700')
+                .attr('fill', '#F8FAFC').text(total || '0');
+            g.append('text').attr('text-anchor', 'middle').attr('dy', '1.2em')
+                .attr('font-size', '11px').attr('fill', '#6B7280').text('clicks');
+        };
+
+        if (devices.length > 0) {
+            createDonut('devicesChart', devices, stats?.totalClicks?.toLocaleString());
+        }
+        if (browsers.length > 0) {
+            createDonut('browsersChart', browsers, stats?.totalClicks?.toLocaleString());
+        }
+    }, [isLoading, devices, browsers, stats]);
 
     const topLocation = locations[0];
     const maxLocationCount = topLocation?.count || 1;
@@ -142,11 +202,6 @@ const Analytics = () => {
                 <div className="page-header-left">
                     <h1 className="page-title">Analytics</h1>
                     <div className="page-subtitle">Aggregate analytics across all your links.</div>
-                </div>
-                <div className="date-range-selector">
-                    <i className="fas fa-calendar"></i>
-                    <span>Last {timePeriod === '1Y' ? '1 Year' : timePeriod === '90D' ? '90 Days' : timePeriod === '7D' ? '7 Days' : '30 Days'}</span>
-                    <i className="fas fa-chevron-down" style={{ fontSize: '10px' }}></i>
                 </div>
             </header>
 
@@ -213,7 +268,7 @@ const Analytics = () => {
                     <h3 className="breakdown-title">Top Locations</h3>
                     {locations.length === 0 ? (
                         <div style={{ padding: '24px 0', color: '#6B7280', fontSize: '13px', textAlign: 'center' }}>
-                            Location breakdown available on individual link analytics.
+                            No location data yet
                         </div>
                     ) : (
                         locations.slice(0, 5).map((loc) => (
@@ -234,17 +289,51 @@ const Analytics = () => {
                 {/* Devices */}
                 <div className="breakdown-card">
                     <h3 className="breakdown-title">Devices</h3>
-                    <div style={{ padding: '24px 0', color: '#6B7280', fontSize: '13px', textAlign: 'center' }}>
-                        Device breakdown available on individual link analytics.
-                    </div>
+                    {devices.length === 0 ? (
+                        <div style={{ padding: '24px 0', color: '#6B7280', fontSize: '13px', textAlign: 'center' }}>
+                            No device data yet
+                        </div>
+                    ) : (
+                        <div className="donut-container">
+                            <svg className="donut-chart" id="devicesChart"></svg>
+                            <div className="donut-legend">
+                                {devices.map(d => (
+                                    <div className="legend-row" key={d.label}>
+                                        <div className="legend-left">
+                                            <div className="legend-dot" style={{ background: d.color }}></div>
+                                            <span className="legend-label">{d.label}</span>
+                                        </div>
+                                        <span className="legend-percent">{d.value}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Browsers */}
                 <div className="breakdown-card">
                     <h3 className="breakdown-title">Browsers</h3>
-                    <div style={{ padding: '24px 0', color: '#6B7280', fontSize: '13px', textAlign: 'center' }}>
-                        Browser breakdown available on individual link analytics.
-                    </div>
+                    {browsers.length === 0 ? (
+                        <div style={{ padding: '24px 0', color: '#6B7280', fontSize: '13px', textAlign: 'center' }}>
+                            No browser data yet
+                        </div>
+                    ) : (
+                        <div className="donut-container">
+                            <svg className="donut-chart" id="browsersChart"></svg>
+                            <div className="donut-legend">
+                                {browsers.map(b => (
+                                    <div className="legend-row" key={b.label}>
+                                        <div className="legend-left">
+                                            <div className="legend-dot" style={{ background: b.color }}></div>
+                                            <span className="legend-label">{b.label}</span>
+                                        </div>
+                                        <span className="legend-percent">{b.value}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 

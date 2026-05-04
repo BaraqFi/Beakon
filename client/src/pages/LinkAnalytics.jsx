@@ -111,7 +111,7 @@ const LinkAnalytics = () => {
       .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`);
 
-    const x = d3.scalePoint().domain(chartData.map(d => d.date)).range([0, width]);
+    const x = d3.scaleBand().domain(chartData.map(d => d.date)).range([0, width]).padding(0.2);
     const maxVal = d3.max(chartData, d => d.value) || 10;
     const y = d3.scaleLinear().domain([0, maxVal * 1.1]).range([height, 0]);
 
@@ -133,23 +133,16 @@ const LinkAnalytics = () => {
       .call(g => g.selectAll('.tick line').remove())
       .call(g => g.selectAll('text').attr('fill', '#6B7280').attr('font-size', '11px').attr('x', -10));
 
-    const area = d3.area()
-      .x(d => x(d.date)).y0(height).y1(d => y(d.value))
-      .curve(d3.curveMonotoneX);
-    svg.append('path').datum(chartData)
-      .attr('fill', 'rgba(139, 92, 246, 0.08)').attr('d', area);
-
-    const line = d3.line()
-      .x(d => x(d.date)).y(d => y(d.value))
-      .curve(d3.curveMonotoneX);
-    svg.append('path').datum(chartData)
-      .attr('fill', 'none').attr('stroke', '#8B5CF6')
-      .attr('stroke-width', 2).attr('d', line);
-
-    // Dot markers
-    svg.selectAll('circle').data(chartData).enter().append('circle')
-      .attr('cx', d => x(d.date)).attr('cy', d => y(d.value))
-      .attr('r', 3).attr('fill', '#8B5CF6');
+    svg.selectAll('.bar')
+      .data(chartData)
+      .enter().append('rect')
+      .attr('class', 'bar')
+      .attr('x', d => x(d.date))
+      .attr('y', d => y(d.value))
+      .attr('width', x.bandwidth())
+      .attr('height', d => height - y(d.value))
+      .attr('fill', '#8B5CF6')
+      .attr('rx', 4);
 
   }, [isLoading, chartData]);
 
@@ -258,10 +251,6 @@ const LinkAnalytics = () => {
           <span className={`status-badge ${link.status}`}>
             {link.status === 'active' ? 'Active' : 'Paused'}
           </span>
-        </div>
-        <div className="date-range-selector">
-          <i className="fas fa-calendar" />
-          <span>All time</span>
         </div>
       </header>
 

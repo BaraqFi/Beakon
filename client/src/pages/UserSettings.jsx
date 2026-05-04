@@ -7,8 +7,6 @@ const UserSettings = () => {
     const { user, setUser, logout } = useAuth();
     const navigate = useNavigate();
 
-    const [isApiKeyVisible, setIsApiKeyVisible] = useState(false);
-    const [apiKey, setApiKey] = useState(user?.apiKey || '');
     const [name, setName] = useState(user?.name || '');
     const [email, setEmail] = useState(user?.email || '');
     const [saveLoading, setSaveLoading] = useState(false);
@@ -41,14 +39,6 @@ const UserSettings = () => {
         } finally {
             setSaveLoading(false);
         }
-    };
-
-    const handleRegenerate = () => {
-        const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-        let newKey = 'sk_live_';
-        for (let i = 0; i < 40; i++) newKey += chars.charAt(Math.floor(Math.random() * chars.length));
-        setApiKey(newKey);
-        setIsApiKeyVisible(true);
     };
 
     const handleDeleteAccount = async () => {
@@ -130,33 +120,6 @@ const UserSettings = () => {
                         </div>
                         <div className="domain-info">
                             Custom domains available on the Business plan. <a href="#" className="upgrade-link">Upgrade</a>
-                        </div>
-                    </div>
-                </div>
-
-                {/* API Access Section */}
-                <div className="settings-card">
-                    <h2 className="card-title">API Access</h2>
-                    <div className="input-group">
-                        <label className="input-label">API Key</label>
-                        <input 
-                            type={isApiKeyVisible ? "text" : "password"} 
-                            className="input-field monospace" 
-                            value={apiKey}
-                            readOnly
-                        />
-                        <div className="api-controls">
-                            <button className="btn btn-ghost" onClick={() => setIsApiKeyVisible(!isApiKeyVisible)}>
-                                <i className={`fas ${isApiKeyVisible ? 'fa-eye-slash' : 'fa-eye'}`}></i>
-                                <span>{isApiKeyVisible ? 'Hide' : 'Reveal'}</span>
-                            </button>
-                            <button className="btn btn-ghost" onClick={handleRegenerate}>
-                                <i className="fas fa-rotate"></i>
-                                Regenerate
-                            </button>
-                        </div>
-                        <div className="api-helper">
-                            Keep your API key secret. Do not share it publicly.
                         </div>
                     </div>
                 </div>

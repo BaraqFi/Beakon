@@ -163,11 +163,6 @@ const Audiences = () => {
                     <h1 className="page-title">Audiences</h1>
                     <div className="page-subtitle">Understand where your audience is and how they engage.</div>
                 </div>
-                <div className="date-range-selector">
-                    <i className="fas fa-calendar"></i>
-                    <span>Last 30 days</span>
-                    <i className="fas fa-chevron-down" style={{ fontSize: '10px' }}></i>
-                </div>
             </header>
 
             <div className="content-grid">

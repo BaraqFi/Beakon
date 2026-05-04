@@ -113,12 +113,6 @@ const CreateLinkModal = ({ isOpen, onClose, onCreate }) => {
                             </div>
                         </div>
 
-                        <div className="form-field">
-                            <div className="collapsible-row">
-                                <span>UTM Parameters</span>
-                                <i className="fas fa-chevron-right"></i>
-                            </div>
-                        </div>
                     </div>
 
                     <div className="modal-preview-column">

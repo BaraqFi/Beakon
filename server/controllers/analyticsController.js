@@ -76,6 +76,10 @@ const getAccountOverview = async (req, res, next) => {
             createdAt: { $gte: monthStart }
         });
 
+        const byCountry = await Click.aggregate([{ $match: { linkId: { $in: linkIds } } }, { $group: { _id: '$country', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 10 }]);
+        const byDevice = await Click.aggregate([{ $match: { linkId: { $in: linkIds } } }, { $group: { _id: '$device', count: { $sum: 1 } } }, { $sort: { count: -1 } }]);
+        const byBrowser = await Click.aggregate([{ $match: { linkId: { $in: linkIds } } }, { $group: { _id: '$browser', count: { $sum: 1 } } }, { $sort: { count: -1 } }]);
+
         const latestLinks = await Link.find({ userId: req.user.userId }).sort({ createdAt: -1 }).limit(5);
         const recentLinks = await Promise.all(latestLinks.map(async (link) => {
             const linkClicks = await Click.countDocuments({ linkId: link._id });
@@ -102,6 +106,9 @@ const getAccountOverview = async (req, res, next) => {
             uniqueVisitors,
             topPerforming,
             clicksByDate,
+            byCountry,
+            byDevice,
+            byBrowser,
             stats: {
                 totalClicks,
                 activeLinks,

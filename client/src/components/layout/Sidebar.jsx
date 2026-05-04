@@ -54,14 +54,6 @@ const Sidebar = ({ isOpen, onClose }) => {
                     <i className="fas fa-cog"></i>
                     <span>Settings</span>
                 </NavLink>
-                <a href="#" className="nav-item">
-                    <i className="fas fa-book"></i>
-                    <span>Docs</span>
-                </a>
-                <a href="#" className="nav-item">
-                    <i className="fas fa-file-lines"></i>
-                    <span>Changelog</span>
-                </a>
             </nav>
 
             <div className="sidebar-user" style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setShowPopover(!showPopover)}>

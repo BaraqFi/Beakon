@@ -1,5 +1,5 @@
 /**
- * Fetches geographical data associated with an IP address via ip-api.com
+ * Fetches geographical data associated with an IP address via ipapi.co
  * Limits query fields internally to minimize payload size.
  *
  * @param {string} ip - The raw IP address
@@ -12,8 +12,7 @@ const getGeoData = async (ip) => {
     }
 
     try {
-        // Querying ip-api with explicit field names: status, country, city
-        const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,city`);
+        const response = await fetch(`https://ipapi.co/${ip}/json/`);
         
         if (!response.ok) {
             return { country: 'Unknown', city: 'Unknown' };
@@ -21,10 +20,10 @@ const getGeoData = async (ip) => {
 
         const data = await response.json();
         
-        if (data.status === 'success') {
+        if (!data.error) {
             return {
-                country: data.country || 'Unknown',
-                city: data.city || 'Unknown'
+                country: data.country_name || 'Unknown',
+                city: data.city || data.region || 'Unknown'
             };
         }
 

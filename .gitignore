@@ -21,6 +21,9 @@ Thumbs.db
 # Misc
 *.log
 beakon-server-keypair.pem
+beakonDev/
+
+# Dev docs (local only)
 DEPLOYMENT_PROGRESS_LOG.md
 deploymentSteps.md
 ARCHITECTURE.md
