@@ -152,7 +152,8 @@ const LinkAnalytics = () => {
       .attr('stroke', '#252836').attr('stroke-width', 1);
 
     const xAxis = d3.axisBottom(x).tickFormat(d => {
-      const date = new Date(d);
+      const parts = d.split('-');
+      const date = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
       const day = date.getDate().toString().padStart(2, '0');
       if (timePeriod === '90D' || timePeriod === '1Y') {
           const month = date.toLocaleString('default', { month: 'short' });
@@ -161,10 +162,11 @@ const LinkAnalytics = () => {
       return day;
     });
 
+    const domainLength = x.domain().length;
     if (timePeriod === '90D') {
-        xAxis.tickValues(x.domain().filter((_, i) => i % 5 === 0));
+        xAxis.tickValues(x.domain().filter((_, i) => (domainLength - 1 - i) % 5 === 0));
     } else if (timePeriod === '1Y') {
-        xAxis.tickValues(x.domain().filter((_, i) => i % 30 === 0));
+        xAxis.tickValues(x.domain().filter((_, i) => (domainLength - 1 - i) % 30 === 0));
     }
 
     svg.append('g').attr('transform', `translate(0,${height})`)
