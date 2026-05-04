@@ -69,7 +69,7 @@ const LinkAnalytics = () => {
           }
           setChartData(fullData);
 
-          const dColors = ['#8B5CF6', '#F43F5E', '#10B981', '#F59E0B'];
+          const dColors = ['#8B5CF6', '#10B981', '#3B82F6', '#F59E0B', '#F43F5E', '#14B8A6'];
 
           setLocations((s.byCountry || []).map((entry) => ({
             country: entry._id || 'Unknown',
@@ -80,13 +80,13 @@ const LinkAnalytics = () => {
           setDevices((s.byDevice || []).map((entry, idx) => ({
             label: entry._id || 'Unknown',
             value: entry.count,
-            color: dColors[idx % 4]
+            color: dColors[idx % dColors.length]
           })));
 
           setBrowsers((s.byBrowser || []).map((entry, idx) => ({
             label: entry._id || 'Unknown',
             value: entry.count,
-            color: dColors[idx % 4]
+            color: dColors[idx % dColors.length]
           })));
         }
       } catch (err) {
@@ -111,6 +111,23 @@ const LinkAnalytics = () => {
     const chartContainer = document.getElementById('linkMainChart');
     if (!chartContainer) return;
 
+    let tooltip = d3.select('#d3-tooltip');
+    if (tooltip.empty()) {
+        tooltip = d3.select('body').append('div')
+            .attr('id', 'd3-tooltip')
+            .style('position', 'absolute')
+            .style('background', '#1E2330')
+            .style('color', '#F8FAFC')
+            .style('padding', '8px 12px')
+            .style('border', '1px solid #252836')
+            .style('border-radius', '6px')
+            .style('font-size', '12px')
+            .style('pointer-events', 'none')
+            .style('opacity', 0)
+            .style('z-index', 1000)
+            .style('box-shadow', '0 4px 6px -1px rgba(0, 0, 0, 0.1)');
+    }
+
     const margin = { top: 20, right: 40, bottom: 40, left: 60 };
     d3.select('#linkMainChart').selectAll('*').remove();
     const containerWidth = (chartContainer.parentElement?.offsetWidth || 600) - 48;
@@ -134,8 +151,24 @@ const LinkAnalytics = () => {
       .attr('y1', d => y(d)).attr('y2', d => y(d))
       .attr('stroke', '#252836').attr('stroke-width', 1);
 
+    const xAxis = d3.axisBottom(x).tickFormat(d => {
+      const date = new Date(d);
+      const day = date.getDate().toString().padStart(2, '0');
+      if (timePeriod === '90D' || timePeriod === '1Y') {
+          const month = date.toLocaleString('default', { month: 'short' });
+          return `${month} ${day}`;
+      }
+      return day;
+    });
+
+    if (timePeriod === '90D') {
+        xAxis.tickValues(x.domain().filter((_, i) => i % 5 === 0));
+    } else if (timePeriod === '1Y') {
+        xAxis.tickValues(x.domain().filter((_, i) => i % 30 === 0));
+    }
+
     svg.append('g').attr('transform', `translate(0,${height})`)
-      .call(d3.axisBottom(x))
+      .call(xAxis)
       .call(g => g.select('.domain').remove())
       .call(g => g.selectAll('.tick line').remove())
       .call(g => g.selectAll('text').attr('fill', '#6B7280').attr('font-size', '11px').attr('y', 12));
@@ -155,13 +188,45 @@ const LinkAnalytics = () => {
       .attr('width', x.bandwidth())
       .attr('height', d => height - y(d.value))
       .attr('fill', '#8B5CF6')
-      .attr('rx', 4);
+      .attr('rx', 4)
+      .on('mouseover', function(event, d) {
+          tooltip.transition().duration(200).style('opacity', 1);
+          tooltip.html(`<strong>${d.date}</strong><br/>${d.value} click${d.value !== 1 ? 's' : ''}`)
+              .style('left', (event.pageX + 10) + 'px')
+              .style('top', (event.pageY - 28) + 'px');
+          d3.select(this).style('opacity', 0.8);
+      })
+      .on('mousemove', function(event) {
+          tooltip.style('left', (event.pageX + 10) + 'px')
+                 .style('top', (event.pageY - 28) + 'px');
+      })
+      .on('mouseout', function() {
+          tooltip.transition().duration(500).style('opacity', 0);
+          d3.select(this).style('opacity', 1);
+      });
 
   }, [isLoading, chartData]);
 
   // Donut charts
   useEffect(() => {
     if (isLoading) return;
+
+    let tooltip = d3.select('#d3-tooltip');
+    if (tooltip.empty()) {
+        tooltip = d3.select('body').append('div')
+            .attr('id', 'd3-tooltip')
+            .style('position', 'absolute')
+            .style('background', '#1E2330')
+            .style('color', '#F8FAFC')
+            .style('padding', '8px 12px')
+            .style('border', '1px solid #252836')
+            .style('border-radius', '6px')
+            .style('font-size', '12px')
+            .style('pointer-events', 'none')
+            .style('opacity', 0)
+            .style('z-index', 1000)
+            .style('box-shadow', '0 4px 6px -1px rgba(0, 0, 0, 0.1)');
+    }
 
     const createDonut = (elementId, data, total) => {
       const el = document.getElementById(elementId);
@@ -178,9 +243,42 @@ const LinkAnalytics = () => {
       const pie = d3.pie().value(d => d.value).sort(null);
       const arc = d3.arc().innerRadius(innerRadius).outerRadius(radius);
 
-      g.selectAll('arc').data(pie(data)).enter().append('g')
-        .append('path').attr('d', arc)
-        .attr('fill', d => color(d.data.label));
+      const totalNum = data.reduce((acc, d) => acc + d.value, 0);
+
+      const arcs = g.selectAll('arc').data(pie(data)).enter().append('g');
+
+      arcs.append('path').attr('d', arc)
+        .attr('fill', d => color(d.data.label))
+        .attr('stroke', '#0D1117')
+        .attr('stroke-width', 2)
+        .on('mouseover', function(event, d) {
+            tooltip.transition().duration(200).style('opacity', 1);
+            tooltip.html(`<strong>${d.data.label}</strong><br/>${d.data.value} click${d.data.value !== 1 ? 's' : ''}`)
+                .style('left', (event.pageX + 10) + 'px')
+                .style('top', (event.pageY - 28) + 'px');
+            d3.select(this).style('opacity', 0.8);
+        })
+        .on('mousemove', function(event) {
+            tooltip.style('left', (event.pageX + 10) + 'px')
+                   .style('top', (event.pageY - 28) + 'px');
+        })
+        .on('mouseout', function() {
+            tooltip.transition().duration(500).style('opacity', 0);
+            d3.select(this).style('opacity', 1);
+        });
+
+      arcs.append('text')
+        .attr('transform', d => `translate(${arc.centroid(d)})`)
+        .attr('text-anchor', 'middle')
+        .attr('dy', '0.35em')
+        .attr('font-size', '11px')
+        .attr('font-weight', '600')
+        .attr('fill', '#fff')
+        .text(d => {
+            if (totalNum === 0) return '';
+            const percentage = Math.round((d.value / totalNum) * 100);
+            return percentage > 5 ? `${percentage}%` : '';
+        });
 
       g.append('text').attr('text-anchor', 'middle').attr('dy', '-0.2em')
         .attr('font-size', '18px').attr('font-weight', '700')

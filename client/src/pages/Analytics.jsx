@@ -128,6 +128,23 @@ const Analytics = () => {
         const chartContainer = document.getElementById('mainChart');
         if (!chartContainer) return;
 
+        let tooltip = d3.select('#d3-tooltip');
+        if (tooltip.empty()) {
+            tooltip = d3.select('body').append('div')
+                .attr('id', 'd3-tooltip')
+                .style('position', 'absolute')
+                .style('background', '#1E2330')
+                .style('color', '#F8FAFC')
+                .style('padding', '8px 12px')
+                .style('border', '1px solid #252836')
+                .style('border-radius', '6px')
+                .style('font-size', '12px')
+                .style('pointer-events', 'none')
+                .style('opacity', 0)
+                .style('z-index', 1000)
+                .style('box-shadow', '0 4px 6px -1px rgba(0, 0, 0, 0.1)');
+        }
+
         const margin = { top: 20, right: 40, bottom: 40, left: 60 };
         d3.select('#mainChart').selectAll('*').remove();
         const containerWidth = chartContainer.parentElement.offsetWidth - 48;
@@ -155,7 +172,23 @@ const Analytics = () => {
             .attr('x1', 0).attr('x2', width).attr('y1', d => y(d)).attr('y2', d => y(d))
             .attr('stroke', '#252836').attr('stroke-width', 1);
 
-        svg.append('g').attr('transform', `translate(0,${height})`).call(d3.axisBottom(x))
+        const xAxis = d3.axisBottom(x).tickFormat(d => {
+            const date = new Date(d);
+            const day = date.getDate().toString().padStart(2, '0');
+            if (timePeriod === '90D' || timePeriod === '1Y') {
+                const month = date.toLocaleString('default', { month: 'short' });
+                return `${month} ${day}`;
+            }
+            return day;
+        });
+
+        if (timePeriod === '90D') {
+            xAxis.tickValues(x.domain().filter((_, i) => i % 5 === 0));
+        } else if (timePeriod === '1Y') {
+            xAxis.tickValues(x.domain().filter((_, i) => i % 30 === 0));
+        }
+
+        svg.append('g').attr('transform', `translate(0,${height})`).call(xAxis)
             .call(g => g.select('.domain').remove()).call(g => g.selectAll('.tick line').remove())
             .call(g => g.selectAll('text').attr('fill', '#6B7280').attr('font-size', '12px').attr('y', 12));
 
@@ -175,17 +208,55 @@ const Analytics = () => {
             .attr('y', d => y(d[1]))
             .attr('height', d => Math.max(0, y(d[0]) - y(d[1])))
             .attr('width', x.bandwidth())
-            .attr('rx', 2);
+            .attr('rx', 2)
+            .on('mouseover', function(event, d) {
+                const linkKey = d3.select(this.parentNode).datum().key;
+                const linkInfo = linksMeta.find(l => l.id === linkKey);
+                const title = linkInfo ? (linkInfo.title || linkInfo.shortCode) : 'Link';
+                const count = d[1] - d[0];
+                
+                tooltip.transition().duration(200).style('opacity', 1);
+                tooltip.html(`<strong>${title}</strong><br/>${count} click${count !== 1 ? 's' : ''}`)
+                    .style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 28) + 'px');
+                
+                d3.select(this).style('opacity', 0.8);
+            })
+            .on('mousemove', function(event) {
+                tooltip.style('left', (event.pageX + 10) + 'px')
+                       .style('top', (event.pageY - 28) + 'px');
+            })
+            .on('mouseout', function() {
+                tooltip.transition().duration(500).style('opacity', 0);
+                d3.select(this).style('opacity', 1);
+            });
     }, [isLoading, chartData, windowWidth, linksMeta]);
 
     // Donut charts
     useEffect(() => {
         if (isLoading || linksMeta.length === 0) return;
         
-        const colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(linksMeta.map(l => l.id));
-        const deviceColorScale = d3.scaleOrdinal(['#475569', '#64748B', '#94A3B8', '#CBD5E1']);
+        let tooltip = d3.select('#d3-tooltip');
+        if (tooltip.empty()) {
+            tooltip = d3.select('body').append('div')
+                .attr('id', 'd3-tooltip')
+                .style('position', 'absolute')
+                .style('background', '#1E2330')
+                .style('color', '#F8FAFC')
+                .style('padding', '8px 12px')
+                .style('border', '1px solid #252836')
+                .style('border-radius', '6px')
+                .style('font-size', '12px')
+                .style('pointer-events', 'none')
+                .style('opacity', 0)
+                .style('z-index', 1000)
+                .style('box-shadow', '0 4px 6px -1px rgba(0, 0, 0, 0.1)');
+        }
 
-        const createMultiDonut = (elementId, data, total) => {
+        const colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(linksMeta.map(l => l.id));
+        const deviceColorScale = d3.scaleOrdinal(['#8B5CF6', '#10B981', '#3B82F6', '#F59E0B', '#F43F5E', '#14B8A6']);
+
+        const createSingleDonut = (elementId, data, total) => {
             const el = document.getElementById(elementId);
             if (!el || data.length === 0) return;
 
@@ -196,33 +267,46 @@ const Analytics = () => {
             const svg = targetSvg.attr('viewBox', `0 0 ${width} ${height}`);
             const g = svg.append('g').attr('transform', `translate(${width / 2},${height / 2})`);
 
-            // Inner Ring (Categories)
-            const innerRadius = radius * 0.45;
-            const innerOuterRadius = radius * 0.68;
-            const innerPie = d3.pie().value(d => d.value).sort(null);
-            const innerArc = d3.arc().innerRadius(innerRadius).outerRadius(innerOuterRadius);
+            const innerRadius = radius * 0.6;
+            const pie = d3.pie().value(d => d.value).sort(null);
+            const arc = d3.arc().innerRadius(innerRadius).outerRadius(radius);
 
-            g.selectAll('inner-arc').data(innerPie(data)).enter().append('path')
-                .attr('d', innerArc)
+            const totalClicksNum = data.reduce((acc, d) => acc + d.value, 0);
+
+            const arcs = g.selectAll('arc').data(pie(data)).enter().append('g');
+
+            arcs.append('path')
+                .attr('d', arc)
                 .attr('fill', (d, i) => deviceColorScale(i))
                 .attr('stroke', '#0D1117')
-                .attr('stroke-width', 1.5);
+                .attr('stroke-width', 2)
+                .on('mouseover', function(event, d) {
+                    tooltip.transition().duration(200).style('opacity', 1);
+                    tooltip.html(`<strong>${d.data.label}</strong><br/>${d.data.value} click${d.data.value !== 1 ? 's' : ''}`)
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 28) + 'px');
+                    d3.select(this).style('opacity', 0.8);
+                })
+                .on('mousemove', function(event) {
+                    tooltip.style('left', (event.pageX + 10) + 'px')
+                           .style('top', (event.pageY - 28) + 'px');
+                })
+                .on('mouseout', function() {
+                    tooltip.transition().duration(500).style('opacity', 0);
+                    d3.select(this).style('opacity', 1);
+                });
 
-            // Outer Ring (Links)
-            const outerData = data.flatMap(d => d.items.sort((a,b) => b.value - a.value));
-            const outerRadius = radius * 0.95;
-            const outerPie = d3.pie().value(d => d.value).sort(null);
-            const outerArc = d3.arc().innerRadius(innerOuterRadius).outerRadius(outerRadius);
-
-            g.selectAll('outer-arc').data(outerPie(outerData)).enter().append('path')
-                .attr('d', outerArc)
-                .attr('fill', d => colorScale(d.data.linkId))
-                .attr('stroke', '#0D1117')
-                .attr('stroke-width', 1.5)
-                .append("title")
+            arcs.append('text')
+                .attr('transform', d => `translate(${arc.centroid(d)})`)
+                .attr('text-anchor', 'middle')
+                .attr('dy', '0.35em')
+                .attr('font-size', '11px')
+                .attr('font-weight', '600')
+                .attr('fill', '#fff')
                 .text(d => {
-                    const l = linksMeta.find(l => l.id === d.data.linkId);
-                    return `${l ? (l.title || l.shortCode) : 'Link'}: ${d.data.value} clicks`;
+                    if (totalClicksNum === 0) return '';
+                    const percentage = Math.round((d.value / totalClicksNum) * 100);
+                    return percentage > 5 ? `${percentage}%` : '';
                 });
 
             g.append('text').attr('text-anchor', 'middle').attr('dy', '-0.2em')
@@ -232,8 +316,8 @@ const Analytics = () => {
                 .attr('font-size', '11px').attr('fill', '#6B7280').text('clicks');
         };
 
-        if (devices.length > 0) createMultiDonut('devicesChart', devices, stats?.totalClicks?.toLocaleString());
-        if (browsers.length > 0) createMultiDonut('browsersChart', browsers, stats?.totalClicks?.toLocaleString());
+        if (devices.length > 0) createSingleDonut('devicesChart', devices, stats?.totalClicks?.toLocaleString());
+        if (browsers.length > 0) createSingleDonut('browsersChart', browsers, stats?.totalClicks?.toLocaleString());
     }, [isLoading, devices, browsers, stats, linksMeta]);
 
     const topLocation = locations[0];

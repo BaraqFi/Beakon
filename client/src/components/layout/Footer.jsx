@@ -16,7 +16,7 @@ const Footer = () => {
                     <Link to="/signup" className="footer-link">Sign up</Link>
                 </div>
                 <div className="footer-copy">
-                    © 2025 Beakon Analytics
+                    © 2026 Beakon Analytics
                 </div>
             </div>
         </footer>
