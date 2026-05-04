@@ -1,0 +1,20 @@
+{
+  "short_name": "Beakon",
+  "name": "Beakon — Link Analytics",
+  "icons": [
+    {
+      "src": "faviconLogo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "faviconLogo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#0D1117",
+  "background_color": "#0D1117"
+}
