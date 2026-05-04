@@ -253,7 +253,6 @@ const Analytics = () => {
                 .style('box-shadow', '0 4px 6px -1px rgba(0, 0, 0, 0.1)');
         }
 
-        const colorScale = d3.scaleOrdinal(d3.schemeCategory10).domain(linksMeta.map(l => l.id));
         const deviceColorScale = d3.scaleOrdinal(['#8B5CF6', '#10B981', '#3B82F6', '#F59E0B', '#F43F5E', '#14B8A6']);
 
         const createSingleDonut = (elementId, data, total) => {
